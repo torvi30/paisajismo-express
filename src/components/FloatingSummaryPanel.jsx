@@ -29,7 +29,8 @@ export default function FloatingSummaryPanel({
   onDecrementSpecies,
   onRemoveSpecies,
   panelPosition = 'bottom',
-  onTogglePanelPosition
+  onTogglePanelPosition,
+  spaceDimensions = { width: 10, length: 8 }
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [clientName, setClientName] = useState('');
@@ -66,6 +67,9 @@ export default function FloatingSummaryPanel({
       text += `👤 *Cliente:* ${clientName.trim()}\n`;
     }
     text += `🏡 *Espacio a intervenir:* ${spaceName}\n`;
+    if (spaceDimensions) {
+      text += `📐 *Medidas del espacio:* ${spaceDimensions.width}m x ${spaceDimensions.length}m (${spaceDimensions.width * spaceDimensions.length} m²)\n`;
+    }
     text += `📐 *Tipo de diseño:* ${modeName}\n`;
     text += `📊 *Total de ejemplares:* ${totalPlantsCount} plantas\n\n`;
     text += `🌱 *DETALLE DEL DISEÑO PAISAJÍSTICO:*\n`;

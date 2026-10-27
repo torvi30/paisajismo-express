@@ -6,7 +6,10 @@ import React from 'react';
  * with realistic ground shadows and metric adult growth diameter rings.
  */
 export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showRadius = true }) {
-  const diameter = plant.canopyDiameter || '1.2 m';
+  const currentDiameter = plant.diameterMeters 
+    ? `${plant.diameterMeters.toFixed(1)} m` 
+    : plant.canopyDiameter || '1.2 m';
+  const stageLabel = plant.stage === 'joven' ? '🌱 Joven' : plant.stage === 'mediana' ? '🌿 Mediana' : '🌳 Adulta';
   const topImage = plant.topImage || '/plants/top_monstera.png';
 
   return (
@@ -20,14 +23,15 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
               : 'border-emerald-500/35 group-hover:border-emerald-400/60'
           }`}
           style={{
-            width: '125%',
-            height: '125%',
+            width: '120%',
+            height: '120%',
           }}
         >
           {/* Metric Adult Diameter Tag */}
           {isSelected && (
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-900/90 text-emerald-300 border border-emerald-500/40 shadow-sm whitespace-nowrap">
-              Ø Adulta: {diameter}
+            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-900/95 text-emerald-300 border border-emerald-500/40 shadow-md whitespace-nowrap flex items-center gap-1">
+              <span>{stageLabel}</span>
+              <span className="text-white">Ø {currentDiameter}</span>
             </span>
           )}
         </div>

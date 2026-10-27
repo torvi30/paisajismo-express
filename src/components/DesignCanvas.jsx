@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -14,7 +14,10 @@ import {
   Move,
   Compass,
   Grid,
-  Info
+  Info,
+  Ruler,
+  Check,
+  X
 } from 'lucide-react';
 import PlantCanopyTopDown from './PlantCanopyTopDown';
 
@@ -31,7 +34,10 @@ export default function DesignCanvas({
   setSelectedPlantId,
   onAddPlantDirectly,
   panelPosition = 'bottom',
-  onTogglePanelPosition
+  onTogglePanelPosition,
+  spaceDimensions = { width: 10, length: 8 },
+  isMeasuring = false,
+  setIsMeasuring
 }) {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -136,15 +142,112 @@ export default function DesignCanvas({
     setSelectedPlantId(newInstance.instanceId);
   };
 
-  const handleResize = (e, instanceId, delta) => {
+  // Track canvas pixel dimensions for real-scale calculations
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 800, height: 600 });
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const updateDimensions = () => {
+      if (canvasRef.current) {
+        setCanvasDimensions({
+          width: canvasRef.current.clientWidth,
+          height: canvasRef.current.clientHeight,
+        });
+      }
+    };
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // Measuring Tape (Cinta métrica) State
+  const [measureA, setMeasureA] = useState(null); // { x: %, y: % }
+  const [measureB, setMeasureB] = useState(null); // { x: %, y: % }
+  const [isDrawingMeasure, setIsDrawingMeasure] = useState(false);
+
+  const measuredDistance = useMemo(() => {
+    if (!measureA || !measureB) return null;
+    const dxMeters = ((measureB.x - measureA.x) / 100) * (spaceDimensions.width || 10);
+    const dyMeters = ((measureB.y - measureA.y) / 100) * (spaceDimensions.length || 8);
+    return Math.sqrt(dxMeters * dxMeters + dyMeters * dyMeters);
+  }, [measureA, measureB, spaceDimensions]);
+
+  const handleCanvasClick = (e) => {
+    if (isMeasuring) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const xPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const yPercent = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+      if (!measureA || (measureA && measureB && !isDrawingMeasure)) {
+        // Start new measurement
+        setMeasureA({ x: xPercent, y: yPercent });
+        setMeasureB(null);
+        setIsDrawingMeasure(true);
+      } else if (isDrawingMeasure) {
+        // Lock measurement
+        setMeasureB({ x: xPercent, y: yPercent });
+        setIsDrawingMeasure(false);
+      }
+      return;
+    }
+    setSelectedPlantId(null);
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    if (isMeasuring && isDrawingMeasure && measureA && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const xPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const yPercent = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+      setMeasureB({ x: xPercent, y: yPercent });
+    }
+  };
+
+  const handleClearMeasurement = () => {
+    setMeasureA(null);
+    setMeasureB(null);
+    setIsDrawingMeasure(false);
+  };
+
+  // Plant Growth Stage Modifier: Joven (Pequeña), Mediana, Adulta (Grande)
+  const handleSetStage = (e, instanceId, newStage) => {
     e.stopPropagation();
     setPlacedPlants((prev) =>
       prev.map((item) => {
         if (item.instanceId !== instanceId) return item;
-        const newScale = Math.max(0.35, Math.min(3.2, (item.scale || 1) + delta));
-        return { ...item, scale: Number(newScale.toFixed(2)) };
+        const base = item.baseDiameterMeters || parseFloat(item.canopyDiameter) || 1.4;
+        const multiplier = newStage === 'joven' ? 0.55 : newStage === 'mediana' ? 0.8 : 1.0;
+        const newDiameter = Number((base * multiplier).toFixed(1));
+        return {
+          ...item,
+          stage: newStage,
+          diameterMeters: newDiameter,
+          scale: Number(multiplier.toFixed(2)),
+        };
       })
     );
+  };
+
+  // Fine Diameter Stepper (+ / - in meters)
+  const handleAdjustDiameter = (e, instanceId, delta) => {
+    e.stopPropagation();
+    setPlacedPlants((prev) =>
+      prev.map((item) => {
+        if (item.instanceId !== instanceId) return item;
+        const current = item.diameterMeters || (item.baseDiameterMeters || parseFloat(item.canopyDiameter) || 1.4);
+        const nextDiameter = Math.max(0.3, Math.min(8.0, Number((current + delta).toFixed(1))));
+        const base = item.baseDiameterMeters || parseFloat(item.canopyDiameter) || 1.4;
+        return {
+          ...item,
+          diameterMeters: nextDiameter,
+          scale: Number((nextDiameter / base).toFixed(2)),
+        };
+      })
+    );
+  };
+
+  const handleResize = (e, instanceId, delta) => {
+    e.stopPropagation();
+    handleAdjustDiameter(e, instanceId, delta > 0 ? 0.2 : -0.2);
   };
 
   const handleFlip = (e, instanceId) => {
@@ -157,7 +260,6 @@ export default function DesignCanvas({
     );
   };
 
-  // Layer order manual offset
   const handleLayerOrder = (e, instanceId, direction) => {
     e.stopPropagation();
     setPlacedPlants((prev) =>
@@ -183,12 +285,15 @@ export default function DesignCanvas({
   };
 
   const selectedPlant = placedPlants.find((p) => p.instanceId === selectedPlantId);
-
   const isAtTop = panelPosition === 'top';
+
+  // Pixels per real meter
+  const pixelsPerMeterX = canvasDimensions.width / (spaceDimensions.width || 10);
+  const pixelsPerMeterY = canvasDimensions.height / (spaceDimensions.length || 8);
 
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-950 overflow-hidden select-none">
-      {/* Floating Ribbon inside Canvas: Background selector pill + Mode indicator (moves to bottom if panel is at top) */}
+      {/* Top Floating Ribbon inside Canvas: Background selector pill + Space scale pill */}
       <div className={`absolute ${isAtTop ? 'bottom-3' : 'top-3'} left-3 right-3 z-20 flex items-center justify-between pointer-events-none transition-all duration-300`}>
         {/* Active Background Badge & Switcher */}
         <div className="pointer-events-auto flex items-center gap-1.5 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-lg">
@@ -213,248 +318,390 @@ export default function DesignCanvas({
           />
         </div>
 
-        {/* View Mode & Selection Info Pill */}
+        {/* Space scale and selection info pill */}
         <div className="pointer-events-auto flex items-center gap-2 p-1 px-3 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-lg">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 font-mono">
             {viewMode === 'cenital' ? (
               <Compass className="w-3.5 h-3.5 text-emerald-400 animate-spin-slow" />
             ) : (
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             )}
             <span>
-              {viewMode === 'cenital' ? 'Plano Cenital 2D' : 'Vista Frontal'} • {placedPlants.length} plantas
+              {spaceDimensions.width}m × {spaceDimensions.length}m ({spaceDimensions.width * spaceDimensions.length}m²)
             </span>
           </div>
           {selectedPlant && (
-            <span className="text-[11px] text-slate-300 border-l border-slate-700 pl-2 font-mono">
-              {selectedPlant.name} {viewMode === 'cenital' && `(Ø ${selectedPlant.canopyDiameter || '1.2m'})`}
+            <span className="text-[11px] text-slate-300 border-l border-slate-700 pl-2 font-mono flex items-center gap-1">
+              <span className="font-bold text-white">{selectedPlant.name}</span>
+              <span className="text-emerald-400 font-bold">
+                (Ø {(selectedPlant.diameterMeters || parseFloat(selectedPlant.canopyDiameter) || 1.4).toFixed(1)}m)
+              </span>
             </span>
           )}
         </div>
       </div>
 
-      {/* Main Interactive Canvas Area */}
-      <div
-        ref={canvasRef}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={() => setSelectedPlantId(null)}
-        className="relative flex-1 w-full h-full overflow-hidden cursor-crosshair touch-none bg-gradient-to-b from-slate-900 via-emerald-950/30 to-slate-950"
-        style={{
-          backgroundImage: `url(${background.url})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        {/* Metric Grid Overlay when in Cenital Mode and showGrid is true */}
-        {viewMode === 'cenital' && showGrid && (
-          <div 
-            className="absolute inset-0 pointer-events-none z-10 opacity-40"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, rgba(255, 255, 255, 0.25) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 1px, transparent 1px),
-                linear-gradient(to right, rgba(16, 185, 129, 0.4) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(16, 185, 129, 0.4) 1px, transparent 1px)
-              `,
-              backgroundSize: '30px 30px, 30px 30px, 150px 150px, 150px 150px',
-            }}
-          />
-        )}
-
-        {/* Cenital Metric Scale Indicator */}
-        {viewMode === 'cenital' && (
-          <div className={`absolute ${isAtTop ? 'bottom-16' : 'bottom-20'} left-4 z-20 pointer-events-none flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-lg text-[10px] font-mono text-emerald-300 transition-all duration-300`}>
-            <Grid className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Escala de referencia: 1 cuadrícula = 1 metro</span>
-          </div>
-        )}
-
-        {/* Empty State Callout */}
-        {placedPlants.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-6 z-20">
-            <div className="max-w-md p-5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-emerald-500/30 shadow-2xl text-center pointer-events-auto animate-fadeIn">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-emerald-400" />
-              </div>
-              <h3 className="font-heading font-bold text-base text-white mb-1">
-                {viewMode === 'cenital' ? 'Plano Cenital listo para diseñar' : 'Jardín sin plantas aún'}
-              </h3>
-              <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-                {viewMode === 'cenital'
-                  ? 'Arrastra plantas para organizar tu terreno desde arriba. Cada especie incluye su radio de copa adulta para calcular distancias exactas.'
-                  : 'Selecciona una planta del catálogo a la derecha para ubicarla recortada sin fondo y moverla libremente.'}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 text-xs px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all hover:scale-105"
-                >
-                  <Upload className="w-3.5 h-3.5" /> 
-                  <span>{viewMode === 'cenital' ? 'Subir foto satélite / dron' : 'Subir foto de mi jardín'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* PLACED PLANTS: NATURAL PERSPECTIVE Z-INDEX SORTING (Y-Depth Layering) */}
-        {placedPlants.map((instance) => {
-          const isSelected = selectedPlantId === instance.instanceId;
-          const isDragging = draggingInstanceId === instance.instanceId;
-          const scale = instance.scale || 1.0;
-
-          // Dimensions: In Cenital view, standard canopy diameter ~120px * scale; in Frontal view ~170px * scale
-          const renderedWidth = viewMode === 'cenital' ? 120 * scale : 170 * scale;
-
-          // NATURAL Z-INDEX CALCULATION:
-          // In Frontal view: Plants with larger Y (closer to bottom of screen / foreground)
-          // MUST naturally be in front of plants with smaller Y (higher up / background).
-          // Multiplied by 10 to give fine-grained depth resolution between plants.
-          const baseDepthZ = viewMode === 'frontal'
-            ? Math.round(instance.y * 10) + (instance.zOffset || 0)
-            : 20 + (instance.zOffset || 0);
-
-          // When actively dragging or selected, bring to the absolute front (1000+) so controls are easy to click
-          const finalZIndex = isSelected || isDragging ? 1000 + baseDepthZ : baseDepthZ;
-
-          return (
-            <div
-              key={instance.instanceId}
-              onPointerDown={(e) => handlePointerDown(e, instance)}
-              className={`absolute select-none cursor-grab active:cursor-grabbing group transition-opacity duration-150 ${
-                isDragging ? 'opacity-95' : ''
-              }`}
-              style={{
-                left: `${instance.x}%`,
-                top: `${instance.y}%`,
-                // Cenital centers at (50%, 50%), Frontal anchors at (50%, 85%) for ground alignment
-                transform: viewMode === 'cenital' ? 'translate(-50%, -50%)' : 'translate(-50%, -85%)',
-                zIndex: finalZIndex,
-              }}
+      {/* Interactive Measuring Bar Callout if measuring is active */}
+      {isMeasuring && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-2 bg-amber-500 text-slate-950 px-4 py-1.5 rounded-full shadow-2xl font-heading font-extrabold text-xs animate-bounce">
+          <Ruler className="w-4 h-4 stroke-[2.5]" />
+          <span>
+            {measureA && isDrawingMeasure
+              ? 'Haz clic en el segundo punto para fijar la distancia'
+              : measureA && measureB
+              ? `Distancia medida: ${measuredDistance ? measuredDistance.toFixed(2) : '0'} metros`
+              : 'Haz clic en el lienzo para iniciar la medición'}
+          </span>
+          {measureA && (
+            <button
+              onClick={handleClearMeasurement}
+              className="ml-1 p-0.5 hover:bg-slate-950/20 rounded text-slate-950"
+              title="Borrar medición"
             >
-              {/* Plant Container: Delicate selection indicator that never obscures neighboring plants */}
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Main Interactive Canvas Area with Rulers */}
+      <div className="relative flex-1 w-full h-full flex flex-col min-h-0 overflow-hidden">
+        {/* Top Metric Ruler (Horizontal) */}
+        {showGrid && (
+          <div className="h-5 w-full bg-slate-900/90 border-b border-emerald-500/20 flex items-center text-[9px] font-mono font-bold text-slate-400 select-none z-10 pl-6 shrink-0 overflow-hidden">
+            {Array.from({ length: spaceDimensions.width + 1 }).map((_, i) => (
               <div
-                className={`relative transition-transform duration-150 ${
-                  isSelected
-                    ? viewMode === 'cenital'
-                      ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950/80 rounded-full'
-                      : 'scale-[1.03]'
-                    : 'hover:brightness-105'
-                }`}
-                style={{ width: `${renderedWidth}px`, height: viewMode === 'cenital' ? `${renderedWidth}px` : 'auto' }}
+                key={`top-ruler-${i}`}
+                style={{ width: `${100 / spaceDimensions.width}%` }}
+                className="relative border-l border-emerald-500/30 h-full flex items-center pl-1"
               >
-                {/* Floating controls toolbar on selection */}
-                {isSelected && (
-                  <div
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="absolute -top-14 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl border border-emerald-400/60 shadow-2xl z-50 animate-fadeIn"
-                  >
-                    {/* Scale up (Agrandar) */}
-                    <button
-                      onClick={(e) => handleResize(e, instance.instanceId, 0.15)}
-                      className="p-1.5 text-slate-300 hover:text-white hover:bg-emerald-600/30 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold"
-                      title="Agrandar tamaño de copa"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>+</span>
-                    </button>
-                    {/* Scale down (Achicar) */}
-                    <button
-                      onClick={(e) => handleResize(e, instance.instanceId, -0.15)}
-                      className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-[11px] font-bold"
-                      title="Reducir tamaño"
-                    >
-                      <Minimize2 className="w-3.5 h-3.5 text-slate-300" />
-                      <span>-</span>
-                    </button>
-                    {/* Flip horizontal */}
-                    {viewMode === 'frontal' && (
-                      <button
-                        onClick={(e) => handleFlip(e, instance.instanceId)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          instance.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                        }`}
-                        title="Invertir orientación"
-                      >
-                        <FlipHorizontal className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {/* Layer Up */}
-                    <button
-                      onClick={(e) => handleLayerOrder(e, instance.instanceId, 'up')}
-                      className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                      title="Traer al frente manualmente"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    {/* Layer Down */}
-                    <button
-                      onClick={(e) => handleLayerOrder(e, instance.instanceId, 'down')}
-                      className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                      title="Enviar atrás manualmente"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                    {/* Duplicate */}
-                    <button
-                      onClick={(e) => handleDuplicate(e, instance)}
-                      className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                      title="Duplicar planta (+1)"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    {/* Delete */}
-                    <button
-                      onClick={(e) => handleDelete(e, instance.instanceId)}
-                      className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg transition-colors"
-                      title="Eliminar del plano"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                <span className={i % 5 === 0 ? 'text-emerald-300 font-extrabold' : ''}>{i}m</span>
+              </div>
+            ))}
+          </div>
+        )}
 
-                {/* GRAPHIC RENDERING: CENITAL VS FRONTAL */}
-                {viewMode === 'cenital' ? (
-                  /* Top-down Architectural Canopy Symbol */
-                  <PlantCanopyTopDown
-                    plant={instance}
-                    scale={scale}
-                    isSelected={isSelected}
-                    showRadius={showRadius}
-                  />
-                ) : (
-                  /* Frontal View: Pure Transparent PNG Cutout with Ground Shadow */
-                  <div className="relative">
-                    <img
-                      src={instance.image}
-                      alt={instance.name}
-                      draggable={false}
-                      className="w-full h-auto object-contain pointer-events-none select-none transition-transform duration-150"
-                      style={{
-                        transform: instance.flipped ? 'scaleX(-1)' : 'none',
-                        filter: isSelected
-                          ? 'drop-shadow(0 20px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 8px rgba(16,185,129,0.5))'
-                          : 'drop-shadow(0 15px 12px rgba(0,0,0,0.5)) drop-shadow(0 3px 5px rgba(0,0,0,0.3))',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Discreet Species Label on Hover/Selection */}
+        {/* Canvas Body with Left Metric Ruler */}
+        <div className="relative flex-1 w-full h-full flex min-h-0 overflow-hidden">
+          {/* Left Metric Ruler (Vertical) */}
+          {showGrid && (
+            <div className="w-6 h-full bg-slate-900/90 border-r border-emerald-500/20 flex flex-col text-[9px] font-mono font-bold text-slate-400 select-none z-10 shrink-0 overflow-hidden">
+              {Array.from({ length: spaceDimensions.length + 1 }).map((_, i) => (
                 <div
-                  className={`absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950/85 backdrop-blur-md text-emerald-300 border border-emerald-500/30 shadow-lg pointer-events-none transition-opacity duration-200 z-30 ${
-                    isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
+                  key={`left-ruler-${i}`}
+                  style={{ height: `${100 / spaceDimensions.length}%` }}
+                  className="relative border-t border-emerald-500/30 w-full flex items-start justify-center pt-0.5"
                 >
-                  {instance.name} {viewMode === 'cenital' && `• Ø ${instance.canopyDiameter || '1.2m'}`}
+                  <span className={i % 5 === 0 ? 'text-emerald-300 font-extrabold' : ''}>{i}m</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Actual Droppable Canvas Area */}
+          <div
+            ref={canvasRef}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onClick={handleCanvasClick}
+            onMouseMove={handleCanvasMouseMove}
+            className={`relative flex-1 w-full h-full overflow-hidden touch-none bg-gradient-to-b from-slate-900 via-emerald-950/30 to-slate-950 ${
+              isMeasuring ? 'cursor-crosshair' : 'cursor-default'
+            }`}
+            style={{
+              backgroundImage: `url(${background.url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+            }}
+          >
+            {/* Dynamic Metric Grid: EXACT 1m x 1m Cells Matching Real Terrain */}
+            {showGrid && (
+              <div 
+                className="absolute inset-0 pointer-events-none z-10 opacity-40"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(to right, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 1px, transparent 1px),
+                    linear-gradient(to right, rgba(16, 185, 129, 0.5) 1.5px, transparent 1.5px),
+                    linear-gradient(to bottom, rgba(16, 185, 129, 0.5) 1.5px, transparent 1.5px)
+                  `,
+                  backgroundSize: `
+                    ${100 / spaceDimensions.width}% ${100 / spaceDimensions.length}%,
+                    ${100 / spaceDimensions.width}% ${100 / spaceDimensions.length}%,
+                    ${(100 / spaceDimensions.width) * 5}% ${(100 / spaceDimensions.length) * 5}%,
+                    ${(100 / spaceDimensions.width) * 5}% ${(100 / spaceDimensions.length) * 5}%
+                  `,
+                }}
+              />
+            )}
+
+            {/* Interactive Laser Tape Measure (Cinta métrica) SVG Overlay */}
+            {measureA && measureB && (
+              <svg className="absolute inset-0 w-full h-full pointer-events-none z-30">
+                <defs>
+                  <marker id="measure-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+                  </marker>
+                </defs>
+                {/* Glow shadow line */}
+                <line
+                  x1={`${measureA.x}%`}
+                  y1={`${measureA.y}%`}
+                  x2={`${measureB.x}%`}
+                  y2={`${measureB.y}%`}
+                  stroke="#f59e0b"
+                  strokeWidth="6"
+                  opacity="0.3"
+                />
+                {/* Main laser line */}
+                <line
+                  x1={`${measureA.x}%`}
+                  y1={`${measureA.y}%`}
+                  x2={`${measureB.x}%`}
+                  y2={`${measureB.y}%`}
+                  stroke="#fbbf24"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 4"
+                  markerStart="url(#measure-arrow)"
+                  markerEnd="url(#measure-arrow)"
+                />
+                {/* Measurement Tag at Midpoint */}
+                <g transform={`translate(${(measureA.x + measureB.x) / 2}%, ${(measureA.y + measureB.y) / 2}%)`}>
+                  <rect
+                    x="-40"
+                    y="-14"
+                    width="80"
+                    height="24"
+                    rx="12"
+                    fill="#0f172a"
+                    stroke="#f59e0b"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x="0"
+                    y="3"
+                    textAnchor="middle"
+                    fill="#fef08a"
+                    fontSize="11"
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                  >
+                    {measuredDistance ? `${measuredDistance.toFixed(2)}m` : ''}
+                  </text>
+                </g>
+              </svg>
+            )}
+
+            {/* Empty State Callout */}
+            {placedPlants.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-6 z-20">
+                <div className="max-w-md p-5 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-emerald-500/30 shadow-2xl text-center pointer-events-auto animate-fadeIn">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <h3 className="font-heading font-bold text-base text-white mb-1">
+                    Espacio métrico listo ({spaceDimensions.width}m × {spaceDimensions.length}m)
+                  </h3>
+                  <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+                    Arrastra plantas desde el catálogo. Cada cuadrícula mide exactamente 1 metro. Al colocar ejemplares puedes elegir tamaño <b>Joven (Pequeña)</b>, <b>Mediana</b> o <b>Adulta (Grande)</b>.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 text-xs px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all hover:scale-105"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> 
+                      <span>{viewMode === 'cenital' ? 'Subir foto satélite / dron' : 'Subir foto de mi jardín'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+
+            {/* PLACED PLANTS: MATHEMATICALLY PROPORTIONAL SIZING TO REAL TERRAIN */}
+            {placedPlants.map((instance) => {
+              const isSelected = selectedPlantId === instance.instanceId;
+              const isDragging = draggingInstanceId === instance.instanceId;
+
+              // Plant Diameter in real meters
+              const baseDiameter = instance.baseDiameterMeters || parseFloat(instance.canopyDiameter) || 1.4;
+              const plantDiameterMeters = instance.diameterMeters || (baseDiameter * (instance.scale || 1.0));
+              const currentStage = instance.stage || 'adulta';
+
+              // REAL CAD SCALE: Rendered Width in pixels proportional to space width
+              const renderedWidth = viewMode === 'cenital'
+                ? Math.max(30, Math.min(650, plantDiameterMeters * pixelsPerMeterX))
+                : Math.max(45, Math.min(650, plantDiameterMeters * pixelsPerMeterX * 1.25));
+
+              // Natural Z-Index
+              const baseDepthZ = viewMode === 'frontal'
+                ? Math.round(instance.y * 10) + (instance.zOffset || 0)
+                : 20 + (instance.zOffset || 0);
+
+              const finalZIndex = isSelected || isDragging ? 1000 + baseDepthZ : baseDepthZ;
+
+              return (
+                <div
+                  key={instance.instanceId}
+                  onPointerDown={(e) => handlePointerDown(e, instance)}
+                  className={`absolute select-none cursor-grab active:cursor-grabbing group transition-opacity duration-150 ${
+                    isDragging ? 'opacity-95' : ''
+                  }`}
+                  style={{
+                    left: `${instance.x}%`,
+                    top: `${instance.y}%`,
+                    transform: viewMode === 'cenital' ? 'translate(-50%, -50%)' : 'translate(-50%, -85%)',
+                    zIndex: finalZIndex,
+                  }}
+                >
+                  {/* Plant Container */}
+                  <div
+                    className={`relative transition-transform duration-150 ${
+                      isSelected
+                        ? viewMode === 'cenital'
+                          ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950/80 rounded-full'
+                          : 'scale-[1.03]'
+                        : 'hover:brightness-105'
+                    }`}
+                    style={{ width: `${renderedWidth}px`, height: viewMode === 'cenital' ? `${renderedWidth}px` : 'auto' }}
+                  >
+                    {/* Floating Controls Toolbar on Selection with Plant Stage & Meter Controls */}
+                    {isSelected && (
+                      <div
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-emerald-400/60 shadow-2xl z-50 animate-fadeIn whitespace-nowrap"
+                      >
+                        {/* Growth Stage Selector (Pequeña / Mediana / Grande) */}
+                        <div className="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-xl border border-slate-700/80">
+                          <button
+                            onClick={(e) => handleSetStage(e, instance.instanceId, 'joven')}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              currentStage === 'joven'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                            title="Planta Joven / Pequeña (~50% de copa adulta, tamaño de maceta inicial)"
+                          >
+                            🌱 Joven
+                          </button>
+                          <button
+                            onClick={(e) => handleSetStage(e, instance.instanceId, 'mediana')}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              currentStage === 'mediana'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                            title="Planta Mediana (~80% de copa adulta, 1-2 años de crecimiento)"
+                          >
+                            🌿 Mediana
+                          </button>
+                          <button
+                            onClick={(e) => handleSetStage(e, instance.instanceId, 'adulta')}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              currentStage === 'adulta'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                            title="Planta Adulta / Grande (100% copa plena madura)"
+                          >
+                            🌳 Adulta
+                          </button>
+                        </div>
+
+                        {/* Exact Meter Diameter Stepper */}
+                        <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-700/80">
+                          <button
+                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, -0.2)}
+                            className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-bold"
+                            title="Achicar 20cm"
+                          >
+                            -
+                          </button>
+                          <span className="font-mono text-[10px] font-extrabold text-emerald-300 min-w-[42px] text-center">
+                            Ø {plantDiameterMeters.toFixed(1)}m
+                          </span>
+                          <button
+                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, 0.2)}
+                            className="w-5 h-5 flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 rounded font-bold"
+                            title="Agrandar 20cm"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Flip horizontal */}
+                        {viewMode === 'frontal' && (
+                          <button
+                            onClick={(e) => handleFlip(e, instance.instanceId)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              instance.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                            }`}
+                            title="Invertir orientación"
+                          >
+                            <FlipHorizontal className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Duplicate */}
+                        <button
+                          onClick={(e) => handleDuplicate(e, instance)}
+                          className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                          title="Duplicar planta (+1)"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Delete */}
+                        <button
+                          onClick={(e) => handleDelete(e, instance.instanceId)}
+                          className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg transition-colors"
+                          title="Eliminar del plano"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* GRAPHIC RENDERING: CENITAL VS FRONTAL */}
+                    {viewMode === 'cenital' ? (
+                      <PlantCanopyTopDown
+                        plant={{ ...instance, diameterMeters: plantDiameterMeters, stage: currentStage }}
+                        scale={instance.scale || 1.0}
+                        isSelected={isSelected}
+                        showRadius={showRadius}
+                      />
+                    ) : (
+                      <div className="relative">
+                        <img
+                          src={instance.image}
+                          alt={instance.name}
+                          draggable={false}
+                          className="w-full h-auto object-contain pointer-events-none select-none transition-transform duration-150"
+                          style={{
+                            transform: instance.flipped ? 'scaleX(-1)' : 'none',
+                            filter: isSelected
+                              ? 'drop-shadow(0 20px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 8px rgba(16,185,129,0.5))'
+                              : 'drop-shadow(0 15px 12px rgba(0,0,0,0.5)) drop-shadow(0 3px 5px rgba(0,0,0,0.3))',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Discreet Species Label on Hover/Selection */}
+                    <div
+                      className={`absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950/85 backdrop-blur-md text-emerald-300 border border-emerald-500/30 shadow-lg pointer-events-none transition-opacity duration-200 z-30 ${
+                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                    >
+                      {instance.name} • Ø {plantDiameterMeters.toFixed(1)}m ({currentStage})
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

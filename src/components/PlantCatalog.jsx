@@ -183,9 +183,12 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
                     {plant.scientificName}
                   </p>
 
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
                       {plant.category}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20" title="Diámetro de copa adulta en metros">
+                      Ø {plant.canopyDiameter || '1.2 m'}
                     </span>
                     <span className="text-[10px] text-slate-400">
                       {plant.height}

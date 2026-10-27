@@ -14,7 +14,8 @@ import {
   Eye,
   Maximize,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Ruler
 } from 'lucide-react';
 import { TEMPLATE_BACKGROUNDS } from '../data/plantData';
 
@@ -35,7 +36,11 @@ export default function Header({
   showRadius,
   setShowRadius,
   panelPosition = 'bottom',
-  onTogglePanelPosition
+  onTogglePanelPosition,
+  spaceDimensions = { width: 10, length: 8 },
+  onOpenSpaceModal,
+  isMeasuring = false,
+  setIsMeasuring
 }) {
   const fileInputRef = useRef(null);
 
@@ -127,6 +132,36 @@ export default function Header({
               Ø Copas
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Real Space Dimensions & Ruler Measuring Button */}
+      <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-700/80 shadow-inner">
+        <button
+          onClick={onOpenSpaceModal}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-emerald-500/40 transition-all"
+          title="Modificar dimensiones reales del espacio (metros)"
+        >
+          <Ruler className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="font-mono">{spaceDimensions.width}m × {spaceDimensions.length}m</span>
+          <span className="hidden md:inline-flex text-[10px] text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20 font-bold">
+            {spaceDimensions.width * spaceDimensions.length} m²
+          </span>
+        </button>
+
+        {setIsMeasuring && (
+          <button
+            onClick={() => setIsMeasuring(!isMeasuring)}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              isMeasuring
+                ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-950/50 animate-pulse'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+            title={isMeasuring ? "Modo cinta métrica activo. Clic en el lienzo para medir. Clic aquí para salir." : "Activar cinta métrica para medir distancias reales"}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            <span className="hidden sm:inline">{isMeasuring ? 'Midiendo' : 'Cinta'}</span>
+          </button>
         )}
       </div>
 

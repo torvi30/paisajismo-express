@@ -5,6 +5,7 @@ import PlantCatalog from './components/PlantCatalog';
 import FloatingSummaryPanel from './components/FloatingSummaryPanel';
 import SettingsModal from './components/SettingsModal';
 import HelpModal from './components/HelpModal';
+import SpaceDimensionsModal from './components/SpaceDimensionsModal';
 import { TEMPLATE_BACKGROUNDS, PLANT_CATALOG } from './data/plantData';
 
 export default function App() {
@@ -13,7 +14,7 @@ export default function App() {
 
   // Placed plants on canvas
   const [placedPlants, setPlacedPlants] = useState(() => {
-    // Initial starter demo plants so the canvas looks lively right away!
+    // Initial starter demo plants calibrated to scale
     return [
       {
         instanceId: 'starter-1',
@@ -22,11 +23,14 @@ export default function App() {
         image: '/plants/monstera-deliciosa.png',
         topImage: '/plants/top_monstera.png',
         canopyDiameter: '1.4 m',
+        baseDiameterMeters: 1.4,
+        diameterMeters: 1.4,
+        stage: 'adulta',
         category: 'Sombra',
         price: 18500,
         x: 32,
         y: 72,
-        scale: 1.15,
+        scale: 1.0,
         flipped: false,
         zIndex: 10,
       },
@@ -37,11 +41,14 @@ export default function App() {
         image: '/plants/palmera-areca.png',
         topImage: '/plants/top_palm.png',
         canopyDiameter: '2.0 m',
+        baseDiameterMeters: 2.0,
+        diameterMeters: 2.0,
+        stage: 'adulta',
         category: 'Semisombra',
         price: 24000,
         x: 70,
         y: 65,
-        scale: 1.35,
+        scale: 1.0,
         flipped: true,
         zIndex: 8,
       },
@@ -52,11 +59,14 @@ export default function App() {
         image: '/plants/lavanda-floral.png',
         topImage: '/plants/top_flower.png',
         canopyDiameter: '0.8 m',
+        baseDiameterMeters: 0.8,
+        diameterMeters: 0.8,
+        stage: 'adulta',
         category: 'Sol',
         price: 7500,
         x: 52,
         y: 82,
-        scale: 0.95,
+        scale: 1.0,
         flipped: false,
         zIndex: 12,
       }
@@ -92,6 +102,24 @@ export default function App() {
   const [viewMode, setViewModeState] = useState('frontal');
   const [showGrid, setShowGrid] = useState(true);
   const [showRadius, setShowRadius] = useState(true);
+
+  // Real Terrain / Space Dimensions in Meters (Width x Length)
+  const [spaceDimensions, setSpaceDimensions] = useState(() => {
+    const saved = localStorage.getItem('pe_space_dimensions');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return { width: 10, length: 8 };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pe_space_dimensions', JSON.stringify(spaceDimensions));
+  }, [spaceDimensions]);
+
+  const [isSpaceModalOpen, setIsSpaceModalOpen] = useState(false);
+  const [isMeasuring, setIsMeasuring] = useState(false);
 
   // Floating summary panel dock position ('bottom' | 'top')
   const [panelPosition, setPanelPosition] = useState(() => {
@@ -142,13 +170,18 @@ export default function App() {
     const posX = customX !== null ? customX : Math.max(15, Math.min(85, 50 + jitterX));
     const posY = customY !== null ? customY : Math.max(25, Math.min(80, 65 + jitterY));
 
+    const baseDiameter = parseFloat(plant.canopyDiameter) || 1.4;
+
     const newInstance = {
       instanceId: `plant-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
       plantId: plant.id,
       name: plant.name,
       image: plant.image,
       topImage: plant.topImage || '/plants/top_monstera.png',
-      canopyDiameter: plant.canopyDiameter || '1.2 m',
+      canopyDiameter: plant.canopyDiameter || `${baseDiameter} m`,
+      baseDiameterMeters: baseDiameter,
+      diameterMeters: baseDiameter,
+      stage: 'adulta',
       category: plant.category,
       price: plant.price || 0,
       x: posX,
@@ -244,6 +277,10 @@ export default function App() {
         setShowRadius={setShowRadius}
         panelPosition={panelPosition}
         onTogglePanelPosition={handleTogglePanelPosition}
+        spaceDimensions={spaceDimensions}
+        onOpenSpaceModal={() => setIsSpaceModalOpen(true)}
+        isMeasuring={isMeasuring}
+        setIsMeasuring={setIsMeasuring}
       />
 
       {/* Main Split Screen Area */}
@@ -268,6 +305,9 @@ export default function App() {
             onAddPlantDirectly={handleAddPlantDirectly}
             panelPosition={panelPosition}
             onTogglePanelPosition={handleTogglePanelPosition}
+            spaceDimensions={spaceDimensions}
+            isMeasuring={isMeasuring}
+            setIsMeasuring={setIsMeasuring}
           />
         </section>
 
@@ -297,9 +337,17 @@ export default function App() {
         onRemoveSpecies={handleRemoveSpecies}
         panelPosition={panelPosition}
         onTogglePanelPosition={handleTogglePanelPosition}
+        spaceDimensions={spaceDimensions}
       />
 
       {/* Modals */}
+      <SpaceDimensionsModal
+        isOpen={isSpaceModalOpen}
+        onClose={() => setIsSpaceModalOpen(false)}
+        spaceDimensions={spaceDimensions}
+        onSaveDimensions={setSpaceDimensions}
+      />
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

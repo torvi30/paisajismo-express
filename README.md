@@ -20,8 +20,15 @@ Aplicación web interactiva de diseño paisajístico y alta conversión creada p
 - **Interruptor Instantáneo en Header:**
   - **👁️ Vista Frente:** Perfecto para fachadas, balcones, terrazas y muros. Renderiza plantas recortadas sin fondo (`PNG Cutout`) a la altura de los ojos con sombra de suelo realista.
   - **📐 Plano Desde Arriba (Cenital):** Especialmente diseñado para **espacios y terrenos grandes, quintas o countries**. Convierte las plantas en **copas botánicas arquitectónicas 2D** con texturas estilizadas por especie (palmeras radiadas, copas de árboles, topiarias, flores, suculentas).
-- **📐 Cuadrícula Métrica (1m x 1m):** Activable en el plano cenital para medir distancias exactas y perímetros.
-- **🌱 Diámetro de Copa Adulta (Ø Metros):** Muestra un halo perimetral punteado con la cobertura adulta de cada ejemplar (ej: *Ø 2.0 m*, *Ø 0.8 m*) para evitar el error de plantar demasiado junto.
+- **📐 Medidas Reales del Terreno (Escala Métrica 1:1):** Configura el ancho y largo exactos en metros (ej: *6m × 12m* = *72 m²*) o selecciona plantillas rápidas (*Balcón*, *Patio*, *Jardín*, *Quinta*).
+- **📏 Reglas Métricas en los Bordes:** Regla superior y lateral graduadas metro a metro (`0m, 1m, 2m...`) para medir visualmente paredes y linderos.
+- **📐 Cuadrícula Métrica Proporcional:** Cuadrícula dinámica donde cada cuadro representa exactamente 1m × 1m del terreno real.
+- **📏 Herramienta Cinta Métrica Interactiva:** Permite medir la distancia exacta en metros entre dos plantas o puntos del terreno con cotas visuales en tiempo real.
+- **🌱 Selector de Madurez y Tamaño de Plantas:**
+  - 🌱 **Joven (Pequeña):** ~50% de la copa adulta (tamaño de compra en maceta inicial).
+  - 🌿 **Mediana:** ~80% de la copa adulta (1 a 2 años de crecimiento).
+  - 🌳 **Adulta (Grande):** 100% de la copa plena madura para calcular sombras y evitar competencias radiculares.
+  - 🎚️ **Ajuste Fino de Metros:** Controles `+` y `-` para calibrar el diámetro en metros con saltos de 20 cm.
 - **🛰️ Subida de Foto Satelital / Dron:** Permite subir capturas de Google Maps, Google Earth o fotos de dron del predio y diseñar directamente encima.
 
 ### 2. 🎯 Catálogo y Lienzo Interactivo
