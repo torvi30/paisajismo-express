@@ -17,7 +17,8 @@ import {
   Info,
   Ruler,
   Check,
-  X
+  X,
+  Sprout
 } from 'lucide-react';
 import PlantCanopyTopDown from './PlantCanopyTopDown';
 
@@ -160,6 +161,59 @@ export default function DesignCanvas({
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Real Pixels Per Meter ratio (1 real meter = pixelsPerMeterX pixels on canvas)
+  const pixelsPerMeterX = canvasDimensions.width / (spaceDimensions.width || 10);
+  const pixelsPerMeterY = canvasDimensions.height / (spaceDimensions.length || 8);
+
+  // Interactive Drag-to-Resize Handle State (Mouse & Touch corner handle)
+  const [resizingInstanceId, setResizingInstanceId] = useState(null);
+  const [resizeStart, setResizeStart] = useState({ startX: 0, startDiameter: 1.4 });
+
+  const handleResizePointerDown = (e, instance) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const currentDiameter = instance.diameterMeters || (instance.baseDiameterMeters || parseFloat(instance.canopyDiameter) || 1.4);
+    setResizingInstanceId(instance.instanceId);
+    setResizeStart({
+      startX: e.clientX,
+      startDiameter: currentDiameter,
+    });
+  };
+
+  useEffect(() => {
+    if (!resizingInstanceId) return;
+
+    const handleResizePointerMove = (e) => {
+      const dxPixels = e.clientX - resizeStart.startX;
+      const dxMeters = (dxPixels / (pixelsPerMeterX || 100));
+      const nextDiameter = Math.max(0.3, Math.min(8.0, Number((resizeStart.startDiameter + dxMeters).toFixed(1))));
+
+      setPlacedPlants((prev) =>
+        prev.map((item) => {
+          if (item.instanceId !== resizingInstanceId) return item;
+          const base = item.baseDiameterMeters || parseFloat(item.canopyDiameter) || 1.4;
+          return {
+            ...item,
+            diameterMeters: nextDiameter,
+            scale: Number((nextDiameter / base).toFixed(2)),
+            stage: nextDiameter < base * 0.65 ? 'joven' : nextDiameter < base * 0.9 ? 'mediana' : 'adulta',
+          };
+        })
+      );
+    };
+
+    const handleResizePointerUp = () => {
+      setResizingInstanceId(null);
+    };
+
+    window.addEventListener('pointermove', handleResizePointerMove);
+    window.addEventListener('pointerup', handleResizePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handleResizePointerMove);
+      window.removeEventListener('pointerup', handleResizePointerUp);
+    };
+  }, [resizingInstanceId, resizeStart, pixelsPerMeterX, setPlacedPlants]);
+
   // Measuring Tape (Cinta métrica) State
   const [measureA, setMeasureA] = useState(null); // { x: %, y: % }
   const [measureB, setMeasureB] = useState(null); // { x: %, y: % }
@@ -229,7 +283,7 @@ export default function DesignCanvas({
 
   // Fine Diameter Stepper (+ / - in meters)
   const handleAdjustDiameter = (e, instanceId, delta) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     setPlacedPlants((prev) =>
       prev.map((item) => {
         if (item.instanceId !== instanceId) return item;
@@ -240,6 +294,25 @@ export default function DesignCanvas({
           ...item,
           diameterMeters: nextDiameter,
           scale: Number((nextDiameter / base).toFixed(2)),
+          stage: nextDiameter < base * 0.65 ? 'joven' : nextDiameter < base * 0.9 ? 'mediana' : 'adulta',
+        };
+      })
+    );
+  };
+
+  // Direct Exact Meter Input Handler
+  const handleSetExactDiameter = (instanceId, exactValue) => {
+    const num = Math.max(0.3, Math.min(8.0, Number(exactValue) || 1.4));
+    const rounded = Number(num.toFixed(1));
+    setPlacedPlants((prev) =>
+      prev.map((item) => {
+        if (item.instanceId !== instanceId) return item;
+        const base = item.baseDiameterMeters || parseFloat(item.canopyDiameter) || 1.4;
+        return {
+          ...item,
+          diameterMeters: rounded,
+          scale: Number((rounded / base).toFixed(2)),
+          stage: rounded < base * 0.65 ? 'joven' : rounded < base * 0.9 ? 'mediana' : 'adulta',
         };
       })
     );
@@ -247,7 +320,7 @@ export default function DesignCanvas({
 
   const handleResize = (e, instanceId, delta) => {
     e.stopPropagation();
-    handleAdjustDiameter(e, instanceId, delta > 0 ? 0.2 : -0.2);
+    handleAdjustDiameter(e, instanceId, delta > 0 ? 0.1 : -0.1);
   };
 
   const handleFlip = (e, instanceId) => {
@@ -286,10 +359,6 @@ export default function DesignCanvas({
 
   const selectedPlant = placedPlants.find((p) => p.instanceId === selectedPlantId);
   const isAtTop = panelPosition === 'top';
-
-  // Pixels per real meter
-  const pixelsPerMeterX = canvasDimensions.width / (spaceDimensions.width || 10);
-  const pixelsPerMeterY = canvasDimensions.height / (spaceDimensions.length || 8);
 
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-950 overflow-hidden select-none isolate">
@@ -343,18 +412,35 @@ export default function DesignCanvas({
         </div>
       </div>
 
-      {/* Mobile Dedicated Plant Control Ribbon (< sm) */}
+      {/* Universal Plant Dimension & Control Bar (Always visible when a plant is selected, NEVER cut off) */}
       {selectedPlant && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
-          className="sm:hidden absolute top-12 inset-x-2 z-40 bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl border border-emerald-500/50 shadow-2xl flex flex-col gap-1.5 animate-fadeIn"
+          className="absolute top-12 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-24px)] max-w-2xl bg-slate-900/95 backdrop-blur-xl p-2 sm:p-2.5 rounded-2xl border border-emerald-500/50 shadow-2xl animate-fadeIn flex flex-col sm:flex-row items-center justify-between gap-2"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-              <span className="text-xs font-heading font-extrabold text-white truncate max-w-[170px]">{selectedPlant.name}</span>
+          {/* Left: Plant Name, Base adult size & Space footprint */}
+          <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto justify-between sm:justify-start">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <Sprout className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-heading font-extrabold text-white truncate max-w-[130px] sm:max-w-[160px]">
+                    {selectedPlant.name}
+                  </p>
+                  <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-300 font-mono font-bold rounded border border-emerald-500/20">
+                    Ø {(selectedPlant.diameterMeters || 1.4).toFixed(1)}m
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Suelo: {(Math.PI * Math.pow((selectedPlant.diameterMeters || 1.4) / 2, 2)).toFixed(1)} m² de espacio
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+
+            {/* Mobile Actions (Visible on < sm) */}
+            <div className="flex items-center gap-1 sm:hidden shrink-0">
               {viewMode === 'frontal' && (
                 <button
                   onClick={(e) => handleFlip(e, selectedPlant.instanceId)}
@@ -387,46 +473,107 @@ export default function DesignCanvas({
               </button>
             </div>
           </div>
-          
-          <div className="flex items-center justify-between gap-1">
-            {/* Growth Stage */}
-            <div className="flex items-center bg-slate-950/90 p-0.5 rounded-xl border border-slate-700/80 text-[10px]">
-              <button
-                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'joven')}
-                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'joven' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
-              >
-                🌱 Joven
-              </button>
-              <button
-                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'mediana')}
-                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'mediana' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
-              >
-                🌿 Med
-              </button>
-              <button
-                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'adulta')}
-                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'adulta' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
-              >
-                🌳 Adulta
-              </button>
-            </div>
 
-            {/* Diameter Stepper */}
+          {/* Center: Growth Stage Presets (🌱 Joven / 🌿 Mediana / 🌳 Adulta) */}
+          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-700/80 w-full sm:w-auto justify-around sm:justify-start">
+            <button
+              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'joven')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                (selectedPlant.stage || 'adulta') === 'joven'
+                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Planta joven / maceta inicial de vivero (~55% de copa adulta)"
+            >
+              🌱 Joven
+            </button>
+            <button
+              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'mediana')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                (selectedPlant.stage || 'adulta') === 'mediana'
+                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Planta mediana (~80% de copa adulta, 1-2 años de crecimiento)"
+            >
+              🌿 Mediana
+            </button>
+            <button
+              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'adulta')}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                (selectedPlant.stage || 'adulta') === 'adulta'
+                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Planta adulta / madura (100% de copa desarrollada)"
+            >
+              🌳 Adulta
+            </button>
+          </div>
+
+          {/* Right: Exact Meter Stepper & Direct Input */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <div className="flex items-center bg-slate-950/90 px-2 py-1 rounded-xl border border-slate-700/80">
               <button
-                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, -0.2)}
-                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-bold text-xs"
+                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, -0.1)}
+                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-black text-sm"
+                title="Achicar 10 centímetros"
               >
                 -
               </button>
-              <span className="font-mono text-[10px] font-extrabold text-emerald-300 px-1">
-                Ø {(selectedPlant.diameterMeters || parseFloat(selectedPlant.canopyDiameter) || 1.4).toFixed(1)}m
-              </span>
+              <div className="flex items-center px-1">
+                <input
+                  type="number"
+                  min="0.3"
+                  max="8.0"
+                  step="0.1"
+                  value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
+                  onChange={(e) => handleSetExactDiameter(selectedPlant.instanceId, e.target.value)}
+                  className="w-12 bg-transparent text-emerald-300 font-mono font-extrabold text-xs text-center focus:outline-none"
+                  title="Escribe los metros reales de ancho"
+                />
+                <span className="text-[10px] text-emerald-400 font-mono font-bold mr-1">m</span>
+              </div>
               <button
-                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, 0.2)}
-                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-bold text-xs"
+                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, 0.1)}
+                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-black text-sm"
+                title="Agrandar 10 centímetros"
               >
                 +
+              </button>
+            </div>
+
+            {/* Desktop Actions */}
+            <div className="hidden sm:flex items-center gap-1">
+              {viewMode === 'frontal' && (
+                <button
+                  onClick={(e) => handleFlip(e, selectedPlant.instanceId)}
+                  className={`p-1.5 rounded-lg text-xs font-semibold ${selectedPlant.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
+                  title="Invertir orientación"
+                >
+                  <FlipHorizontal className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={(e) => handleDuplicate(e, selectedPlant)}
+                className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold"
+                title="Duplicar planta (+1)"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, selectedPlant.instanceId)}
+                className="p-1.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 rounded-lg text-xs font-semibold"
+                title="Eliminar del plano"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setSelectedPlantId(null)}
+                className="p-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-lg"
+                title="Cerrar calibrador"
+              >
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -621,10 +768,8 @@ export default function DesignCanvas({
               const plantDiameterMeters = instance.diameterMeters || (baseDiameter * (instance.scale || 1.0));
               const currentStage = instance.stage || 'adulta';
 
-              // REAL CAD SCALE: Rendered Width in pixels proportional to space width
-              const renderedWidth = viewMode === 'cenital'
-                ? Math.max(30, Math.min(650, plantDiameterMeters * pixelsPerMeterX))
-                : Math.max(45, Math.min(650, plantDiameterMeters * pixelsPerMeterX * 1.25));
+              // REAL CAD SCALE: Rendered Width in pixels proportional to space width (1:1 Exact Metric)
+              const renderedWidth = Math.max(30, Math.min(800, plantDiameterMeters * pixelsPerMeterX));
 
               // Natural Z-Index
               const baseDepthZ = viewMode === 'frontal'
@@ -656,101 +801,32 @@ export default function DesignCanvas({
                     }`}
                     style={{ width: `${renderedWidth}px`, height: viewMode === 'cenital' ? `${renderedWidth}px` : 'auto' }}
                   >
-                    {/* Floating Controls Toolbar on Selection with Plant Stage & Meter Controls (Desktop) */}
+                    {/* Interactive Selection Box with CAD Dimension Line & Corner Drag Handle */}
                     {isSelected && (
-                      <div
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className="hidden sm:flex absolute -top-16 left-1/2 -translate-x-1/2 items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-emerald-400/60 shadow-2xl z-50 animate-fadeIn whitespace-nowrap"
-                      >
-                        {/* Growth Stage Selector (Pequeña / Mediana / Grande) */}
-                        <div className="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-xl border border-slate-700/80">
-                          <button
-                            onClick={(e) => handleSetStage(e, instance.instanceId, 'joven')}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              currentStage === 'joven'
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                            title="Planta Joven / Pequeña (~50% de copa adulta, tamaño de maceta inicial)"
-                          >
-                            🌱 Joven
-                          </button>
-                          <button
-                            onClick={(e) => handleSetStage(e, instance.instanceId, 'mediana')}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              currentStage === 'mediana'
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                            title="Planta Mediana (~80% de copa adulta, 1-2 años de crecimiento)"
-                          >
-                            🌿 Mediana
-                          </button>
-                          <button
-                            onClick={(e) => handleSetStage(e, instance.instanceId, 'adulta')}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              currentStage === 'adulta'
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-white'
-                            }`}
-                            title="Planta Adulta / Grande (100% copa plena madura)"
-                          >
-                            🌳 Adulta
-                          </button>
+                      <>
+                        {/* Dashed Bounding Box */}
+                        <div className="absolute -inset-1 border-2 border-emerald-400 border-dashed rounded-xl pointer-events-none z-30" />
+
+                        {/* Real Metric Dimension Line under plant (Cota Métrica Real) */}
+                        <div className="absolute -bottom-7 inset-x-0 flex items-center justify-between text-[10px] font-mono font-black text-emerald-300 pointer-events-none select-none z-30">
+                          <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
+                          <div className="flex-1 border-t-2 border-emerald-400 border-dashed mx-1 flex items-center justify-center">
+                            <span className="bg-slate-950/95 px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-300 shadow-md whitespace-nowrap text-[10px] font-bold">
+                              ↔ {plantDiameterMeters.toFixed(1)} m reales
+                            </span>
+                          </div>
+                          <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
                         </div>
 
-                        {/* Exact Meter Diameter Stepper */}
-                        <div className="flex items-center gap-1 bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-700/80">
-                          <button
-                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, -0.2)}
-                            className="w-5 h-5 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded font-bold"
-                            title="Achicar 20cm"
-                          >
-                            -
-                          </button>
-                          <span className="font-mono text-[10px] font-extrabold text-emerald-300 min-w-[42px] text-center">
-                            Ø {plantDiameterMeters.toFixed(1)}m
-                          </span>
-                          <button
-                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, 0.2)}
-                            className="w-5 h-5 flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-slate-800 rounded font-bold"
-                            title="Agrandar 20cm"
-                          >
-                            +
-                          </button>
+                        {/* Corner Drag-to-Resize Handle (Bottom-Right, touch & mouse friendly) */}
+                        <div
+                          onPointerDown={(e) => handleResizePointerDown(e, instance)}
+                          className="absolute -bottom-3 -right-3 w-7 h-7 bg-emerald-500 hover:bg-emerald-400 active:scale-125 text-slate-950 rounded-full flex items-center justify-center shadow-xl cursor-nwse-resize z-40 transition-transform ring-2 ring-slate-950"
+                          title="Arrastra esta esquina para agrandar o achicar en metros reales"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
                         </div>
-
-                        {/* Flip horizontal */}
-                        {viewMode === 'frontal' && (
-                          <button
-                            onClick={(e) => handleFlip(e, instance.instanceId)}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              instance.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                            }`}
-                            title="Invertir orientación"
-                          >
-                            <FlipHorizontal className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-
-                        {/* Duplicate */}
-                        <button
-                          onClick={(e) => handleDuplicate(e, instance)}
-                          className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                          title="Duplicar planta (+1)"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Delete */}
-                        <button
-                          onClick={(e) => handleDelete(e, instance.instanceId)}
-                          className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg transition-colors"
-                          title="Eliminar del plano"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      </>
                     )}
 
                     {/* GRAPHIC RENDERING: CENITAL VS FRONTAL */}
