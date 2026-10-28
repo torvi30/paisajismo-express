@@ -173,6 +173,9 @@ export default function App() {
     const posY = customY !== null ? customY : Math.max(25, Math.min(80, 65 + jitterY));
 
     const baseDiameter = parseFloat(plant.canopyDiameter) || 1.4;
+    const stage = plant.defaultStage || 'adulta';
+    const multiplier = stage === 'joven' ? 0.55 : stage === 'mediana' ? 0.8 : 1.0;
+    const startDiameter = Number((baseDiameter * multiplier).toFixed(1));
 
     const newInstance = {
       instanceId: `plant-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -182,13 +185,13 @@ export default function App() {
       topImage: plant.topImage || '/plants/top_monstera.png',
       canopyDiameter: plant.canopyDiameter || `${baseDiameter} m`,
       baseDiameterMeters: baseDiameter,
-      diameterMeters: baseDiameter,
-      stage: 'adulta',
+      diameterMeters: startDiameter,
+      stage: stage,
       category: plant.category,
       price: plant.price || 0,
       x: posX,
       y: posY,
-      scale: 1.0,
+      scale: Number(multiplier.toFixed(2)),
       flipped: false,
       zIndex: placedPlants.length + 10,
     };

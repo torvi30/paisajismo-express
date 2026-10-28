@@ -207,6 +207,41 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
                       </span>
                     )}
                   </div>
+
+                  {/* Direct Size Selection Buttons */}
+                  <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-slate-700/60">
+                    <span className="text-[9px] text-slate-400 font-bold mr-0.5">Tamaño:</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddWithFeedback({ ...plant, defaultStage: 'joven' });
+                      }}
+                      className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-900/90 hover:bg-emerald-600 text-slate-300 hover:text-white font-semibold border border-slate-700/80 transition-colors"
+                      title="Añadir como planta joven / maceta pequeña de vivero"
+                    >
+                      🌱 Joven
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddWithFeedback({ ...plant, defaultStage: 'mediana' });
+                      }}
+                      className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-900/90 hover:bg-emerald-600 text-slate-300 hover:text-white font-semibold border border-slate-700/80 transition-colors"
+                      title="Añadir en tamaño mediano de crecimiento"
+                    >
+                      🌿 Med
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddWithFeedback({ ...plant, defaultStage: 'adulta' });
+                      }}
+                      className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-900/90 hover:bg-emerald-600 text-slate-300 hover:text-white font-semibold border border-slate-700/80 transition-colors"
+                      title="Añadir como planta adulta madura a escala real"
+                    >
+                      🌳 Adulta
+                    </button>
+                  </div>
                 </div>
 
                 {/* Quick Add Button */}

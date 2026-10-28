@@ -511,12 +511,27 @@ export default function DesignCanvas({
             </button>
           </div>
 
-          {/* Right: Exact Meter Stepper & Direct Input */}
+          {/* Right: Exact Meter Stepper & Range Slider */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Real meter range slider for ultra-easy sliding */}
+            <div className="hidden md:flex items-center gap-1.5 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-700/80">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Deslizar:</span>
+              <input
+                type="range"
+                min="0.3"
+                max="5.0"
+                step="0.1"
+                value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
+                onChange={(e) => handleSetExactDiameter(selectedPlant.instanceId, e.target.value)}
+                className="w-24 sm:w-28 accent-emerald-500 cursor-pointer"
+                title="Desliza para agrandar o achicar en metros reales"
+              />
+            </div>
+
             <div className="flex items-center bg-slate-950/90 px-2 py-1 rounded-xl border border-slate-700/80">
               <button
                 onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, -0.1)}
-                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-black text-sm"
+                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-black text-sm active:scale-90 transition-transform"
                 title="Achicar 10 centímetros"
               >
                 -
@@ -536,7 +551,7 @@ export default function DesignCanvas({
               </div>
               <button
                 onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, 0.1)}
-                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-black text-sm"
+                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-black text-sm active:scale-90 transition-transform"
                 title="Agrandar 10 centímetros"
               >
                 +
@@ -806,6 +821,30 @@ export default function DesignCanvas({
                       <>
                         {/* Dashed Bounding Box */}
                         <div className="absolute -inset-1 border-2 border-emerald-400 border-dashed rounded-xl pointer-events-none z-30" />
+
+                        {/* Quick Floating Stepper directly above the plant */}
+                        <div
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="absolute -top-11 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-emerald-400 shadow-2xl z-40 pointer-events-auto select-none"
+                        >
+                          <button
+                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, -0.2)}
+                            className="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-90 text-white font-black text-xs flex items-center justify-center transition-all shadow-sm"
+                            title="Achicar 20 cm"
+                          >
+                            -
+                          </button>
+                          <span className="font-mono text-xs font-black text-emerald-300 px-1 whitespace-nowrap">
+                            Ø {plantDiameterMeters.toFixed(1)} m
+                          </span>
+                          <button
+                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, 0.2)}
+                            className="w-6 h-6 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-90 text-slate-950 font-black text-xs flex items-center justify-center transition-all shadow-sm"
+                            title="Agrandar 20 cm"
+                          >
+                            +
+                          </button>
+                        </div>
 
                         {/* Real Metric Dimension Line under plant (Cota Métrica Real) */}
                         <div className="absolute -bottom-7 inset-x-0 flex items-center justify-between text-[10px] font-mono font-black text-emerald-300 pointer-events-none select-none z-30">

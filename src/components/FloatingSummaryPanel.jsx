@@ -81,7 +81,10 @@ export default function FloatingSummaryPanel({
     text += `🌱 *DETALLE DEL DISEÑO PAISAJÍSTICO:*\n`;
 
     sortedSummaryList.forEach((item) => {
-      text += `• *${item.count}x* ${item.plant.name} _(${item.plant.category})_`;
+      const diameterInfo = item.plant.diameterMeters 
+        ? ` _(Ø ${item.plant.diameterMeters}m - ${item.plant.stage || 'adulta'})_`
+        : ` _(Copa Ø ${item.plant.canopyDiameter || '1.4m'})_`;
+      text += `• *${item.count}x* ${item.plant.name}${diameterInfo}`;
       if (item.plant.price) {
         text += ` - Est. $${(item.plant.price * item.count).toLocaleString('es-AR')}`;
       }
