@@ -42,6 +42,8 @@ export default function DesignCanvas({
 }) {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const justDraggedRef = useRef(false);
+  const dragStartPosRef = useRef({ x: 0, y: 0 });
   const [draggingInstanceId, setDraggingInstanceId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ offsetX: 0, offsetY: 0 });
 
@@ -74,6 +76,8 @@ export default function DesignCanvas({
     e.stopPropagation();
     setSelectedPlantId(instance.instanceId);
     setDraggingInstanceId(instance.instanceId);
+    justDraggedRef.current = false;
+    dragStartPosRef.current = { x: e.clientX, y: e.clientY };
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const plantXInPixels = (instance.x / 100) * canvasRect.width;
@@ -88,6 +92,11 @@ export default function DesignCanvas({
   useEffect(() => {
     const handlePointerMove = (e) => {
       if (!draggingInstanceId || !canvasRef.current) return;
+
+      const dist = Math.hypot(e.clientX - dragStartPosRef.current.x, e.clientY - dragStartPosRef.current.y);
+      if (dist > 4) {
+        justDraggedRef.current = true;
+      }
 
       const canvasRect = canvasRef.current.getBoundingClientRect();
       const currentXPixels = e.clientX - canvasRect.left - dragOffset.offsetX;
@@ -109,6 +118,9 @@ export default function DesignCanvas({
     const handlePointerUp = () => {
       if (draggingInstanceId) {
         setDraggingInstanceId(null);
+        setTimeout(() => {
+          justDraggedRef.current = false;
+        }, 150);
       }
     };
 
@@ -172,6 +184,8 @@ export default function DesignCanvas({
   const handleResizePointerDown = (e, instance) => {
     e.stopPropagation();
     e.preventDefault();
+    justDraggedRef.current = true;
+    setSelectedPlantId(instance.instanceId);
     const currentDiameter = instance.diameterMeters || (instance.baseDiameterMeters || parseFloat(instance.canopyDiameter) || 1.4);
     setResizingInstanceId(instance.instanceId);
     setResizeStart({
@@ -204,6 +218,9 @@ export default function DesignCanvas({
 
     const handleResizePointerUp = () => {
       setResizingInstanceId(null);
+      setTimeout(() => {
+        justDraggedRef.current = false;
+      }, 150);
     };
 
     window.addEventListener('pointermove', handleResizePointerMove);
@@ -227,6 +244,12 @@ export default function DesignCanvas({
   }, [measureA, measureB, spaceDimensions]);
 
   const handleCanvasClick = (e) => {
+    if (e.target.closest && e.target.closest('[data-no-canvas-click]')) {
+      return;
+    }
+    if (justDraggedRef.current) {
+      return;
+    }
     if (isMeasuring) {
       const rect = canvasRef.current.getBoundingClientRect();
       const xPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
@@ -415,181 +438,192 @@ export default function DesignCanvas({
       {/* Universal Plant Dimension & Control Bar (Always visible when a plant is selected, NEVER cut off) */}
       {selectedPlant && (
         <div
+          data-no-canvas-click="true"
+          onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          className="absolute top-12 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-24px)] max-w-2xl bg-slate-900/95 backdrop-blur-xl p-2 sm:p-2.5 rounded-2xl border border-emerald-500/50 shadow-2xl animate-fadeIn flex flex-col sm:flex-row items-center justify-between gap-2"
+          className="absolute top-14 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-24px)] max-w-xl bg-slate-900/95 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-emerald-500/50 shadow-2xl animate-fadeIn flex flex-col gap-2 select-none"
         >
-          {/* Left: Plant Name, Base adult size & Space footprint */}
-          <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto justify-between sm:justify-start">
+          {/* Row 1: Plant info & Quick actions */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
                 <Sprout className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-heading font-extrabold text-white truncate max-w-[130px] sm:max-w-[160px]">
-                    {selectedPlant.name}
-                  </p>
-                  <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-300 font-mono font-bold rounded border border-emerald-500/20">
-                    Ø {(selectedPlant.diameterMeters || 1.4).toFixed(1)}m
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  Suelo: {(Math.PI * Math.pow((selectedPlant.diameterMeters || 1.4) / 2, 2)).toFixed(1)} m² de espacio
-                </p>
+              <div className="min-w-0 flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-heading font-extrabold text-white truncate max-w-[130px] sm:max-w-[180px]">
+                  {selectedPlant.name}
+                </span>
+                <span className="shrink-0 text-[11px] px-2 py-0.5 bg-emerald-500/15 text-emerald-300 font-mono font-bold rounded-md border border-emerald-500/30">
+                  Ø {(selectedPlant.diameterMeters || 1.4).toFixed(1)}m
+                </span>
+                <span className="hidden sm:inline-block shrink-0 text-[10px] text-slate-400 font-mono">
+                  Suelo: {(Math.PI * Math.pow((selectedPlant.diameterMeters || 1.4) / 2, 2)).toFixed(1)} m²
+                </span>
               </div>
             </div>
 
-            {/* Mobile Actions (Visible on < sm) */}
-            <div className="flex items-center gap-1 sm:hidden shrink-0">
+            {/* Action buttons (Flip, Duplicate, Delete, Close) */}
+            <div className="flex items-center gap-1 shrink-0">
               {viewMode === 'frontal' && (
                 <button
-                  onClick={(e) => handleFlip(e, selectedPlant.instanceId)}
-                  className={`p-1.5 rounded-lg text-xs font-semibold ${selectedPlant.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'bg-slate-800 text-slate-300'}`}
-                  title="Invertir orientación"
-                >
-                  <FlipHorizontal className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <button
-                onClick={(e) => handleDuplicate(e, selectedPlant)}
-                className="p-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold"
-                title="Duplicar planta"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={(e) => handleDelete(e, selectedPlant.instanceId)}
-                className="p-1.5 bg-rose-500/20 text-rose-300 rounded-lg text-xs font-semibold"
-                title="Eliminar planta"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setSelectedPlantId(null)}
-                className="p-1.5 bg-slate-800 text-slate-400 rounded-lg"
-                title="Deseleccionar"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Center: Growth Stage Presets (🌱 Joven / 🌿 Mediana / 🌳 Adulta) */}
-          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-700/80 w-full sm:w-auto justify-around sm:justify-start">
-            <button
-              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'joven')}
-              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                (selectedPlant.stage || 'adulta') === 'joven'
-                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Planta joven / maceta inicial de vivero (~55% de copa adulta)"
-            >
-              🌱 Joven
-            </button>
-            <button
-              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'mediana')}
-              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                (selectedPlant.stage || 'adulta') === 'mediana'
-                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Planta mediana (~80% de copa adulta, 1-2 años de crecimiento)"
-            >
-              🌿 Mediana
-            </button>
-            <button
-              onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'adulta')}
-              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                (selectedPlant.stage || 'adulta') === 'adulta'
-                  ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Planta adulta / madura (100% de copa desarrollada)"
-            >
-              🌳 Adulta
-            </button>
-          </div>
-
-          {/* Right: Exact Meter Stepper & Range Slider */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Real meter range slider for ultra-easy sliding */}
-            <div className="hidden md:flex items-center gap-1.5 bg-slate-950/90 px-3 py-1.5 rounded-xl border border-slate-700/80">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Deslizar:</span>
-              <input
-                type="range"
-                min="0.3"
-                max="5.0"
-                step="0.1"
-                value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
-                onChange={(e) => handleSetExactDiameter(selectedPlant.instanceId, e.target.value)}
-                className="w-24 sm:w-28 accent-emerald-500 cursor-pointer"
-                title="Desliza para agrandar o achicar en metros reales"
-              />
-            </div>
-
-            <div className="flex items-center bg-slate-950/90 px-2 py-1 rounded-xl border border-slate-700/80">
-              <button
-                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, -0.1)}
-                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-black text-sm active:scale-90 transition-transform"
-                title="Achicar 10 centímetros"
-              >
-                -
-              </button>
-              <div className="flex items-center px-1">
-                <input
-                  type="number"
-                  min="0.3"
-                  max="8.0"
-                  step="0.1"
-                  value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
-                  onChange={(e) => handleSetExactDiameter(selectedPlant.instanceId, e.target.value)}
-                  className="w-12 bg-transparent text-emerald-300 font-mono font-extrabold text-xs text-center focus:outline-none"
-                  title="Escribe los metros reales de ancho"
-                />
-                <span className="text-[10px] text-emerald-400 font-mono font-bold mr-1">m</span>
-              </div>
-              <button
-                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, 0.1)}
-                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-black text-sm active:scale-90 transition-transform"
-                title="Agrandar 10 centímetros"
-              >
-                +
-              </button>
-            </div>
-
-            {/* Desktop Actions */}
-            <div className="hidden sm:flex items-center gap-1">
-              {viewMode === 'frontal' && (
-                <button
-                  onClick={(e) => handleFlip(e, selectedPlant.instanceId)}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFlip(e, selectedPlant.instanceId);
+                  }}
                   className={`p-1.5 rounded-lg text-xs font-semibold ${selectedPlant.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'bg-slate-800 text-slate-300 hover:text-white'}`}
-                  title="Invertir orientación"
+                  title="Invertir orientación horizontal"
                 >
                   <FlipHorizontal className="w-3.5 h-3.5" />
                 </button>
               )}
               <button
-                onClick={(e) => handleDuplicate(e, selectedPlant)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicate(e, selectedPlant);
+                }}
                 className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold"
                 title="Duplicar planta (+1)"
               >
                 <Copy className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={(e) => handleDelete(e, selectedPlant.instanceId)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(e, selectedPlant.instanceId);
+                }}
                 className="p-1.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 rounded-lg text-xs font-semibold"
                 title="Eliminar del plano"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => setSelectedPlantId(null)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPlantId(null);
+                }}
                 className="p-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-lg"
                 title="Cerrar calibrador"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            </div>
+          </div>
+
+          {/* Row 2: Stage Presets + Real-Meter Stepper & Slider */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+            {/* Stage Selector Pills */}
+            <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetStage(e, selectedPlant.instanceId, 'joven');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  (selectedPlant.stage || 'adulta') === 'joven'
+                    ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Planta joven / maceta de vivero (~55% de copa adulta)"
+              >
+                🌱 Joven
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetStage(e, selectedPlant.instanceId, 'mediana');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  (selectedPlant.stage || 'adulta') === 'mediana'
+                    ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Planta mediana (~80% de copa adulta)"
+              >
+                🌿 Mediana
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSetStage(e, selectedPlant.instanceId, 'adulta');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  (selectedPlant.stage || 'adulta') === 'adulta'
+                    ? 'bg-emerald-600 text-white font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Planta adulta / madura (100% de copa)"
+              >
+                🌳 Adulta
+              </button>
+            </div>
+
+            {/* Slider and Meter Stepper */}
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+              {/* Range slider */}
+              <div className="hidden sm:flex items-center gap-1.5 bg-slate-950/90 px-2.5 py-1 rounded-xl border border-slate-800 flex-1 max-w-[150px]">
+                <input
+                  type="range"
+                  min="0.3"
+                  max="5.0"
+                  step="0.1"
+                  value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleSetExactDiameter(selectedPlant.instanceId, e.target.value);
+                  }}
+                  className="w-full accent-emerald-500 cursor-pointer h-1.5"
+                  title="Desliza para agrandar o achicar en metros reales"
+                />
+              </div>
+
+              {/* Exact meter stepper */}
+              <div className="flex items-center bg-slate-950/90 px-1.5 py-0.5 rounded-xl border border-slate-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdjustDiameter(e, selectedPlant.instanceId, -0.1);
+                  }}
+                  className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-black text-sm active:scale-90 transition-transform"
+                  title="Achicar 10 centímetros"
+                >
+                  -
+                </button>
+                <div className="flex items-center px-1">
+                  <input
+                    type="number"
+                    min="0.3"
+                    max="8.0"
+                    step="0.1"
+                    value={(selectedPlant.diameterMeters || 1.4).toFixed(1)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleSetExactDiameter(selectedPlant.instanceId, e.target.value);
+                    }}
+                    className="w-10 bg-transparent text-emerald-300 font-mono font-extrabold text-xs text-center focus:outline-none"
+                    title="Escribe los metros reales de ancho"
+                  />
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold mr-0.5">m</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdjustDiameter(e, selectedPlant.instanceId, 0.1);
+                  }}
+                  className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-black text-sm active:scale-90 transition-transform"
+                  title="Agrandar 10 centímetros"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -796,6 +830,11 @@ export default function DesignCanvas({
               return (
                 <div
                   key={instance.instanceId}
+                  data-no-canvas-click="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlantId(instance.instanceId);
+                  }}
                   onPointerDown={(e) => handlePointerDown(e, instance)}
                   className={`absolute select-none cursor-grab active:cursor-grabbing group transition-opacity duration-150 ${
                     isDragging ? 'opacity-95' : ''
@@ -824,11 +863,17 @@ export default function DesignCanvas({
 
                         {/* Quick Floating Stepper directly above the plant */}
                         <div
+                          data-no-canvas-click="true"
+                          onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                           className="absolute -top-11 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-emerald-400 shadow-2xl z-40 pointer-events-auto select-none"
                         >
                           <button
-                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, -0.2)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdjustDiameter(e, instance.instanceId, -0.2);
+                            }}
                             className="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-90 text-white font-black text-xs flex items-center justify-center transition-all shadow-sm"
                             title="Achicar 20 cm"
                           >
@@ -838,7 +883,11 @@ export default function DesignCanvas({
                             Ø {plantDiameterMeters.toFixed(1)} m
                           </span>
                           <button
-                            onClick={(e) => handleAdjustDiameter(e, instance.instanceId, 0.2)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdjustDiameter(e, instance.instanceId, 0.2);
+                            }}
                             className="w-6 h-6 rounded-full bg-emerald-500 hover:bg-emerald-400 active:scale-90 text-slate-950 font-black text-xs flex items-center justify-center transition-all shadow-sm"
                             title="Agrandar 20 cm"
                           >
@@ -851,7 +900,7 @@ export default function DesignCanvas({
                           <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
                           <div className="flex-1 border-t-2 border-emerald-400 border-dashed mx-1 flex items-center justify-center">
                             <span className="bg-slate-950/95 px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-300 shadow-md whitespace-nowrap text-[10px] font-bold">
-                              ↔ {plantDiameterMeters.toFixed(1)} m reales
+                              ↔ {plantDiameterMeters.toFixed(1)} m reales ↔
                             </span>
                           </div>
                           <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
@@ -859,8 +908,10 @@ export default function DesignCanvas({
 
                         {/* Corner Drag-to-Resize Handle (Bottom-Right, touch & mouse friendly) */}
                         <div
+                          data-no-canvas-click="true"
+                          onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => handleResizePointerDown(e, instance)}
-                          className="absolute -bottom-3 -right-3 w-7 h-7 bg-emerald-500 hover:bg-emerald-400 active:scale-125 text-slate-950 rounded-full flex items-center justify-center shadow-xl cursor-nwse-resize z-40 transition-transform ring-2 ring-slate-950"
+                          className="absolute -bottom-3 -right-3 w-7 h-7 bg-emerald-500 hover:bg-emerald-400 active:scale-125 text-slate-950 rounded-full flex items-center justify-center shadow-xl cursor-nwse-resize z-40 transition-transform ring-2 ring-slate-950 pointer-events-auto"
                           title="Arrastra esta esquina para agrandar o achicar en metros reales"
                         >
                           <Maximize2 className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -891,14 +942,12 @@ export default function DesignCanvas({
                       </div>
                     )}
 
-                    {/* Discreet Species Label on Hover/Selection */}
-                    <div
-                      className={`absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950/85 backdrop-blur-md text-emerald-300 border border-emerald-500/30 shadow-lg pointer-events-none transition-opacity duration-200 z-30 ${
-                        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      }`}
-                    >
-                      {instance.name} • Ø {plantDiameterMeters.toFixed(1)}m ({currentStage})
-                    </div>
+                    {/* Discreet Species Label on Hover when not selected */}
+                    {!isSelected && (
+                      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950/85 backdrop-blur-md text-emerald-300 border border-emerald-500/30 shadow-lg pointer-events-none transition-opacity duration-200 z-30 opacity-0 group-hover:opacity-100">
+                        {instance.name} • Ø {plantDiameterMeters.toFixed(1)}m ({currentStage})
+                      </div>
+                    )}
                   </div>
                 </div>
               );
