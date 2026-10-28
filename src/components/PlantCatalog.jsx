@@ -18,7 +18,7 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [justAddedId, setJustAddedId] = useState(null);
 
-  const categories = ['Todas', '🌸 Flores', 'Sol', 'Semisombra', 'Sombra'];
+  const categories = ['Todas', 'Sol', 'Semisombra', 'Sombra'];
 
   const filteredPlants = useMemo(() => {
     return PLANT_CATALOG.filter((plant) => {
@@ -28,9 +28,7 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
         plant.type.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
-        selectedCategory === 'Todas' ||
-        (selectedCategory === '🌸 Flores' && (plant.isFlower || plant.type.toLowerCase().includes('flor'))) ||
-        plant.category === selectedCategory;
+        selectedCategory === 'Todas' || plant.category === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
