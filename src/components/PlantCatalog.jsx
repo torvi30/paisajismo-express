@@ -18,7 +18,7 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
   const [selectedCategory, setSelectedCategory] = useState('Todas');
   const [justAddedId, setJustAddedId] = useState(null);
 
-  const categories = ['Todas', 'Sol', 'Sombra', 'Semisombra'];
+  const categories = ['Todas', '🌸 Flores', 'Sol', 'Semisombra', 'Sombra'];
 
   const filteredPlants = useMemo(() => {
     return PLANT_CATALOG.filter((plant) => {
@@ -28,7 +28,9 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
         plant.type.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
-        selectedCategory === 'Todas' || plant.category === selectedCategory;
+        selectedCategory === 'Todas' ||
+        (selectedCategory === '🌸 Flores' && (plant.isFlower || plant.type.toLowerCase().includes('flor'))) ||
+        plant.category === selectedCategory;
 
       return matchesSearch && matchesCategory;
     });
@@ -54,8 +56,9 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
       case 'Semisombra':
         return <CloudSun className="w-3 h-3 text-teal-400" />;
       case 'Sombra':
-      default:
         return <Moon className="w-3 h-3 text-indigo-400" />;
+      default:
+        return <Sparkles className="w-3 h-3 text-pink-400" />;
     }
   };
 
