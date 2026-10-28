@@ -647,14 +647,12 @@ export default function DesignCanvas({
                     zIndex: finalZIndex,
                   }}
                 >
-                  {/* Plant Container */}
+                  {/* Plant Container - Natural scale without sudden jumping */}
                   <div
-                    className={`relative transition-transform duration-150 ${
-                      isSelected
-                        ? viewMode === 'cenital'
-                          ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950/80 rounded-full'
-                          : 'scale-[1.03]'
-                        : 'hover:brightness-105'
+                    className={`relative ${
+                      isSelected && viewMode === 'cenital'
+                        ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950/80 rounded-full'
+                        : ''
                     }`}
                     style={{ width: `${renderedWidth}px`, height: viewMode === 'cenital' ? `${renderedWidth}px` : 'auto' }}
                   >
@@ -772,9 +770,7 @@ export default function DesignCanvas({
                           className="w-full h-auto object-contain pointer-events-none select-none transition-transform duration-150"
                           style={{
                             transform: instance.flipped ? 'scaleX(-1)' : 'none',
-                            filter: isSelected
-                              ? 'drop-shadow(0 20px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 8px rgba(16,185,129,0.5))'
-                              : 'drop-shadow(0 15px 12px rgba(0,0,0,0.5)) drop-shadow(0 3px 5px rgba(0,0,0,0.3))',
+                            filter: 'none',
                           }}
                         />
                       </div>
