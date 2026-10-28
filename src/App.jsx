@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Eye, Sprout, Ruler, MessageCircle } from 'lucide-react';
 import Header from './components/Header';
 import DesignCanvas from './components/DesignCanvas';
 import PlantCatalog from './components/PlantCatalog';
@@ -11,6 +12,7 @@ import { TEMPLATE_BACKGROUNDS, PLANT_CATALOG } from './data/plantData';
 export default function App() {
   // Background State
   const [currentBackground, setCurrentBackground] = useState(TEMPLATE_BACKGROUNDS[0]);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
 
   // Placed plants on canvas
   const [placedPlants, setPlacedPlants] = useState(() => {
@@ -338,7 +340,72 @@ export default function App() {
         panelPosition={panelPosition}
         onTogglePanelPosition={handleTogglePanelPosition}
         spaceDimensions={spaceDimensions}
+        isExpanded={isSummaryExpanded}
+        setIsExpanded={setIsSummaryExpanded}
+        activeTab={activeTab}
       />
+
+      {/* Mobile Bottom Navigation Bar (Phone & Tablet < lg) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-xl border-t border-emerald-900/30 z-50 px-2 flex items-center justify-around select-none">
+        {/* Tab: Lienzo */}
+        <button
+          onClick={() => {
+            setActiveTab('canvas');
+            setIsSummaryExpanded(false);
+          }}
+          className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+            activeTab === 'canvas' && !isSummaryExpanded ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Eye className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px] tracking-tight">Lienzo</span>
+        </button>
+
+        {/* Tab: Catálogo de Plantas */}
+        <button
+          onClick={() => {
+            setActiveTab('catalog');
+            setIsSummaryExpanded(false);
+          }}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+            activeTab === 'catalog' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Sprout className="w-5 h-5 mb-0.5" />
+          <span className="text-[10px] tracking-tight">Plantas</span>
+          {placedPlants.length > 0 && (
+            <span className="absolute top-0.5 right-[22%] w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-mono text-[9px] font-black flex items-center justify-center shadow-sm">
+              {placedPlants.length}
+            </span>
+          )}
+        </button>
+
+        {/* Action: Medidas del Espacio */}
+        <button
+          onClick={() => setIsSpaceModalOpen(true)}
+          className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          <Ruler className="w-5 h-5 mb-0.5 text-emerald-400" />
+          <span className="text-[10px] font-mono tracking-tight">{spaceDimensions.width}×{spaceDimensions.length}m</span>
+        </button>
+
+        {/* Action: Cotizar / WhatsApp */}
+        <button
+          onClick={() => {
+            setActiveTab('canvas');
+            setIsSummaryExpanded((prev) => !prev);
+          }}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
+            isSummaryExpanded ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <MessageCircle className="w-5 h-5 mb-0.5 text-emerald-400" />
+          <span className="text-[10px] tracking-tight">Cotizar</span>
+          {placedPlants.length > 0 && (
+            <span className="absolute top-1 right-[22%] w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          )}
+        </button>
+      </nav>
 
       {/* Modals */}
       <SpaceDimensionsModal

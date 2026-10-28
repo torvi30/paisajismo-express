@@ -30,9 +30,15 @@ export default function FloatingSummaryPanel({
   onRemoveSpecies,
   panelPosition = 'bottom',
   onTogglePanelPosition,
-  spaceDimensions = { width: 10, length: 8 }
+  spaceDimensions = { width: 10, length: 8 },
+  isExpanded: externalIsExpanded,
+  setIsExpanded: externalSetIsExpanded,
+  activeTab = 'canvas'
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : internalExpanded;
+  const setIsExpanded = externalSetIsExpanded || setInternalExpanded;
+
   const [clientName, setClientName] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [copied, setCopied] = useState(false);
@@ -115,7 +121,7 @@ export default function FloatingSummaryPanel({
 
   if (totalPlantsCount === 0) {
     return (
-      <div className={`fixed ${isAtTop ? 'top-[72px]' : 'bottom-4'} left-4 right-4 lg:left-6 lg:right-[400px] z-30 pointer-events-none transition-all duration-300`}>
+      <div className={`fixed ${isAtTop ? 'top-[72px]' : 'bottom-[76px] lg:bottom-4'} left-4 right-4 lg:left-6 lg:right-[400px] z-30 pointer-events-none transition-all duration-300 ${activeTab === 'catalog' ? 'hidden lg:block' : 'block'}`}>
         <div className="max-w-md mx-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-xl flex items-center justify-between pointer-events-auto">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -152,14 +158,30 @@ export default function FloatingSummaryPanel({
       {isExpanded && (
         <div 
           onClick={() => setIsExpanded(false)}
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-40 lg:hidden"
         />
       )}
 
-      {/* Floating Bar / Sheet (Dockable Top or Bottom) */}
-      <div className={`fixed ${isAtTop ? 'top-[72px]' : 'bottom-3'} left-3 right-3 lg:left-6 lg:right-[400px] z-40 transition-all duration-300`}>
+      {/* Floating Bar / Sheet (Dockable Top or Bottom, clears mobile nav) */}
+      <div className={`fixed ${
+        isAtTop 
+          ? 'top-[72px]' 
+          : isExpanded 
+          ? 'bottom-[70px] lg:bottom-3 max-h-[85vh]' 
+          : 'bottom-[72px] lg:bottom-3'
+      } left-3 right-3 lg:left-6 lg:right-[400px] z-40 transition-all duration-300 ${
+        activeTab === 'catalog' && !isExpanded ? 'hidden lg:block' : 'block'
+      }`}>
         <div className="bg-slate-900/95 backdrop-blur-xl border border-emerald-500/30 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10">
           
+          {/* Mobile Sheet Handle (tap to toggle) */}
+          <div 
+            onClick={() => setIsExpanded(!isExpanded)} 
+            className="w-full flex items-center justify-center pt-2 pb-0.5 lg:hidden cursor-pointer bg-slate-900"
+          >
+            <div className="w-10 h-1 rounded-full bg-slate-700 hover:bg-slate-600 transition-colors" />
+          </div>
+
           {/* Header Bar (always visible) */}
           <div className="p-3 md:p-3.5 flex items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-slate-800/90 to-slate-900">
             {/* Quick summary preview & toggle */}

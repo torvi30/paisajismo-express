@@ -231,8 +231,8 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
         )}
       </div>
 
-      {/* Footer Helper Note */}
-      <div className="p-3 bg-slate-950/60 border-t border-slate-800/80 text-center">
+      {/* Footer Helper Note (clears mobile bottom bar) */}
+      <div className="p-3 mb-16 lg:mb-0 bg-slate-950/60 border-t border-slate-800/80 text-center">
         <p className="text-[11px] text-slate-400">
           🌿 Todas las plantas vienen <strong className="text-emerald-400">recortadas sin fondo</strong> para ubicarlas libremente
         </p>

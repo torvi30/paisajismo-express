@@ -135,136 +135,116 @@ export default function Header({
         )}
       </div>
 
-      {/* Real Space Dimensions & Ruler Measuring Button */}
-      <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-        <button
-          onClick={onOpenSpaceModal}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-emerald-500/40 transition-all"
-          title="Modificar dimensiones reales del espacio (metros)"
-        >
-          <Ruler className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-mono">{spaceDimensions.width}m × {spaceDimensions.length}m</span>
-          <span className="hidden md:inline-flex text-[10px] text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20 font-bold">
-            {spaceDimensions.width * spaceDimensions.length} m²
+        {/* Space Dimensions & Ruler Measuring Button (Visible on sm screens and up, mobile has direct access in bottom bar) */}
+        <div className="hidden sm:flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-700/80 shadow-inner">
+          <button
+            onClick={onOpenSpaceModal}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white border border-slate-700/80 hover:border-emerald-500/40 transition-all"
+            title="Modificar dimensiones reales del espacio (metros)"
+          >
+            <Ruler className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-mono">{spaceDimensions.width}m × {spaceDimensions.length}m</span>
+            <span className="hidden md:inline-flex text-[10px] text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/20 font-bold">
+              {spaceDimensions.width * spaceDimensions.length} m²
+            </span>
+          </button>
+
+          {setIsMeasuring && (
+            <button
+              onClick={() => setIsMeasuring(!isMeasuring)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                isMeasuring
+                  ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-950/50 animate-pulse'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+              title={isMeasuring ? "Modo cinta métrica activo. Clic en el lienzo para medir. Clic aquí para salir." : "Activar cinta métrica para medir distancias reales"}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="hidden md:inline">{isMeasuring ? 'Midiendo' : 'Cinta'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Background Selector & Upload Photo */}
+        <div className="hidden lg:flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60 shadow-inner">
+          <span className="text-xs font-medium text-slate-400 px-1 flex items-center gap-1">
+            <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden xl:inline">Fondo:</span>
           </span>
-        </button>
 
-        {setIsMeasuring && (
+          {/* Preset background selector buttons for this mode */}
+          <div className="flex items-center gap-1 max-w-[420px] overflow-x-auto no-scrollbar py-0.5">
+            {currentModeBackgrounds.map((bg) => {
+              const isSelected = currentBackground.id === bg.id;
+              return (
+                <button
+                  key={bg.id}
+                  onClick={() => onSelectBackground(bg)}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition-all duration-200 ${
+                    isSelected 
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30 font-semibold ring-1 ring-emerald-400/50' 
+                      : bg.isDarkBlueprint
+                      ? 'text-emerald-400 bg-slate-900 hover:text-white hover:bg-slate-700/80 border border-emerald-500/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                  }`}
+                  title={bg.subtitle}
+                >
+                  {bg.name.split(' (')[0]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="h-4 w-px bg-slate-700 mx-1"></div>
+
+          {/* Upload Custom Photo Input */}
           <button
-            onClick={() => setIsMeasuring(!isMeasuring)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              isMeasuring
-                ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-950/50 animate-pulse'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            onClick={() => fileInputRef.current?.click()}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-200 border whitespace-nowrap ${
+              currentBackground.isCustom
+                ? 'bg-teal-600 text-white border-teal-400 shadow-md shadow-teal-950/40'
+                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
             }`}
-            title={isMeasuring ? "Modo cinta métrica activo. Clic en el lienzo para medir. Clic aquí para salir." : "Activar cinta métrica para medir distancias reales"}
+            title={viewMode === 'cenital' ? "Sube foto satelital de Google Maps o dron de tu terreno" : "Sube foto de tu patio o fachada"}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="hidden sm:inline">{isMeasuring ? 'Midiendo' : 'Cinta'}</span>
+            <Upload className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{currentBackground.isCustom ? 'Foto Subida' : viewMode === 'cenital' ? 'Subir Satélite/Dron' : 'Subir Mi Foto'}</span>
           </button>
-        )}
-      </div>
-
-      {/* Background Selector & Upload Photo */}
-      <div className="hidden lg:flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60 shadow-inner">
-        <span className="text-xs font-medium text-slate-400 px-1 flex items-center gap-1">
-          <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden xl:inline">Fondo:</span>
-        </span>
-
-        {/* Preset background selector buttons for this mode */}
-        <div className="flex items-center gap-1 max-w-[420px] overflow-x-auto no-scrollbar py-0.5">
-          {currentModeBackgrounds.map((bg) => {
-            const isSelected = currentBackground.id === bg.id;
-            return (
-              <button
-                key={bg.id}
-                onClick={() => onSelectBackground(bg)}
-                className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap transition-all duration-200 ${
-                  isSelected 
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30 font-semibold ring-1 ring-emerald-400/50' 
-                    : bg.isDarkBlueprint
-                    ? 'text-emerald-400 bg-slate-900 hover:text-white hover:bg-slate-700/80 border border-emerald-500/30'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                }`}
-                title={bg.subtitle}
-              >
-                {bg.name.split(' (')[0]}
-              </button>
-            );
-          })}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
 
-        <div className="h-4 w-px bg-slate-700 mx-1"></div>
+        {/* Action Controls */}
+        <div className="flex items-center gap-1.5 md:gap-2">
+          {/* Toggle floating summary panel position directly from the top header (Desktop) */}
+          {onTogglePanelPosition && (
+            <button
+              onClick={onTogglePanelPosition}
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
+                panelPosition === 'top'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-950/40'
+                  : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700 hover:bg-slate-700/80'
+              }`}
+              title={panelPosition === 'top' ? "Panel fijado ARRIBA (despeja el suelo para organizar fácil). Clic para bajar." : "Mover panel ARRIBA para organizar fácil"}
+            >
+              {panelPosition === 'top' ? <ArrowUp className="w-3.5 h-3.5 text-emerald-400" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-400" />}
+              <span className="hidden xl:inline">Panel</span> {panelPosition === 'top' ? 'Arriba' : 'Abajo'}
+            </button>
+          )}
 
-        {/* Upload Custom Photo Input */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-200 border whitespace-nowrap ${
-            currentBackground.isCustom
-              ? 'bg-teal-600 text-white border-teal-400 shadow-md shadow-teal-950/40'
-              : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-          }`}
-          title={viewMode === 'cenital' ? "Sube foto satelital de Google Maps o dron de tu terreno" : "Sube foto de tu patio o fachada"}
-        >
-          <Upload className="w-3.5 h-3.5 text-emerald-400" />
-          <span>{currentBackground.isCustom ? 'Foto Subida' : viewMode === 'cenital' ? 'Subir Satélite/Dron' : 'Subir Mi Foto'}</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
-
-      {/* Action Controls */}
-      <div className="flex items-center gap-2">
-        {/* Toggle floating summary panel position directly from the top header */}
-        {onTogglePanelPosition && (
+          {/* Quick mobile photo upload icon */}
           <button
-            onClick={onTogglePanelPosition}
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
-              panelPosition === 'top'
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-950/40'
-                : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700 hover:bg-slate-700/80'
-            }`}
-            title={panelPosition === 'top' ? "Panel fijado ARRIBA (despeja el suelo para organizar fácil). Clic para bajar." : "Mover panel ARRIBA para organizar fácil"}
+            onClick={() => fileInputRef.current?.click()}
+            className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
+            title="Subir foto propia"
           >
-            {panelPosition === 'top' ? <ArrowUp className="w-3.5 h-3.5 text-emerald-400" /> : <ArrowDown className="w-3.5 h-3.5 text-slate-400" />}
-            <span className="hidden xl:inline">Panel</span> {panelPosition === 'top' ? 'Arriba' : 'Abajo'}
+            <Upload className="w-4 h-4 text-emerald-400" />
           </button>
-        )}
-
-        {/* Mobile View Switcher (Lienzo / Catálogo) */}
-        <div className="flex lg:hidden bg-slate-800 p-0.5 rounded-lg border border-slate-700">
-          <button
-            onClick={() => setActiveTab('canvas')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
-              activeTab === 'canvas' ? 'bg-emerald-600 text-white' : 'text-slate-400'
-            }`}
-          >
-            Lienzo ({placedCount})
-          </button>
-          <button
-            onClick={() => setActiveTab('catalog')}
-            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
-              activeTab === 'catalog' ? 'bg-emerald-600 text-white' : 'text-slate-400'
-            }`}
-          >
-            Plantas
-          </button>
-        </div>
-
-        {/* Quick mobile photo upload icon */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700"
-          title="Subir foto propia"
-        >
-          <Upload className="w-4 h-4 text-emerald-400" />
-        </button>
 
         {/* Clear Canvas */}
         {placedCount > 0 && (

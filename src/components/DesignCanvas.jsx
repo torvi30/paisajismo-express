@@ -292,14 +292,14 @@ export default function DesignCanvas({
   const pixelsPerMeterY = canvasDimensions.height / (spaceDimensions.length || 8);
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-slate-950 overflow-hidden select-none">
+    <div className="relative w-full h-full flex flex-col bg-slate-950 overflow-hidden select-none isolate">
       {/* Top Floating Ribbon inside Canvas: Background selector pill + Space scale pill */}
       <div className={`absolute ${isAtTop ? 'bottom-3' : 'top-3'} left-3 right-3 z-20 flex items-center justify-between pointer-events-none transition-all duration-300`}>
         {/* Active Background Badge & Switcher */}
         <div className="pointer-events-auto flex items-center gap-1.5 p-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-lg">
           <span className="text-[11px] font-semibold text-slate-300 px-2 flex items-center gap-1">
             <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="max-w-[140px] truncate">{background.name}</span>
+            <span className="max-w-[110px] sm:max-w-[160px] truncate">{background.name}</span>
           </span>
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -307,7 +307,8 @@ export default function DesignCanvas({
             title={viewMode === 'cenital' ? "Subir foto satelital de Google Maps o dron" : "Subir foto de fachada o patio"}
           >
             <Upload className="w-3 h-3 text-emerald-400" />
-            <span>{background.isCustom ? 'Cambiar Foto' : viewMode === 'cenital' ? 'Subir Satélite/Dron' : 'Subir Mi Foto'}</span>
+            <span className="hidden sm:inline">{background.isCustom ? 'Cambiar Foto' : viewMode === 'cenital' ? 'Subir Satélite/Dron' : 'Subir Mi Foto'}</span>
+            <span className="sm:hidden">{background.isCustom ? 'Foto' : 'Subir'}</span>
           </button>
           <input
             ref={fileInputRef}
@@ -327,12 +328,13 @@ export default function DesignCanvas({
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             )}
             <span>
-              {spaceDimensions.width}m × {spaceDimensions.length}m ({spaceDimensions.width * spaceDimensions.length}m²)
+              {spaceDimensions.width}m × {spaceDimensions.length}m
+              <span className="hidden sm:inline"> ({spaceDimensions.width * spaceDimensions.length}m²)</span>
             </span>
           </div>
           {selectedPlant && (
-            <span className="text-[11px] text-slate-300 border-l border-slate-700 pl-2 font-mono flex items-center gap-1">
-              <span className="font-bold text-white">{selectedPlant.name}</span>
+            <span className="hidden md:flex text-[11px] text-slate-300 border-l border-slate-700 pl-2 font-mono items-center gap-1">
+              <span className="font-bold text-white truncate max-w-[90px]">{selectedPlant.name}</span>
               <span className="text-emerald-400 font-bold">
                 (Ø {(selectedPlant.diameterMeters || parseFloat(selectedPlant.canopyDiameter) || 1.4).toFixed(1)}m)
               </span>
@@ -340,6 +342,96 @@ export default function DesignCanvas({
           )}
         </div>
       </div>
+
+      {/* Mobile Dedicated Plant Control Ribbon (< sm) */}
+      {selectedPlant && (
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          className="sm:hidden absolute top-12 inset-x-2 z-40 bg-slate-900/95 backdrop-blur-md p-2 rounded-2xl border border-emerald-500/50 shadow-2xl flex flex-col gap-1.5 animate-fadeIn"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+              <span className="text-xs font-heading font-extrabold text-white truncate max-w-[170px]">{selectedPlant.name}</span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {viewMode === 'frontal' && (
+                <button
+                  onClick={(e) => handleFlip(e, selectedPlant.instanceId)}
+                  className={`p-1.5 rounded-lg text-xs font-semibold ${selectedPlant.flipped ? 'bg-emerald-600/30 text-emerald-400' : 'bg-slate-800 text-slate-300'}`}
+                  title="Invertir orientación"
+                >
+                  <FlipHorizontal className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={(e) => handleDuplicate(e, selectedPlant)}
+                className="p-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-semibold"
+                title="Duplicar planta"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => handleDelete(e, selectedPlant.instanceId)}
+                className="p-1.5 bg-rose-500/20 text-rose-300 rounded-lg text-xs font-semibold"
+                title="Eliminar planta"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setSelectedPlantId(null)}
+                className="p-1.5 bg-slate-800 text-slate-400 rounded-lg"
+                title="Deseleccionar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between gap-1">
+            {/* Growth Stage */}
+            <div className="flex items-center bg-slate-950/90 p-0.5 rounded-xl border border-slate-700/80 text-[10px]">
+              <button
+                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'joven')}
+                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'joven' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
+              >
+                🌱 Joven
+              </button>
+              <button
+                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'mediana')}
+                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'mediana' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
+              >
+                🌿 Med
+              </button>
+              <button
+                onClick={(e) => handleSetStage(e, selectedPlant.instanceId, 'adulta')}
+                className={`px-2 py-1 rounded-lg font-bold transition-all ${(selectedPlant.stage || 'adulta') === 'adulta' ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-400'}`}
+              >
+                🌳 Adulta
+              </button>
+            </div>
+
+            {/* Diameter Stepper */}
+            <div className="flex items-center bg-slate-950/90 px-2 py-1 rounded-xl border border-slate-700/80">
+              <button
+                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, -0.2)}
+                className="w-6 h-6 flex items-center justify-center text-slate-300 hover:text-white font-bold text-xs"
+              >
+                -
+              </button>
+              <span className="font-mono text-[10px] font-extrabold text-emerald-300 px-1">
+                Ø {(selectedPlant.diameterMeters || parseFloat(selectedPlant.canopyDiameter) || 1.4).toFixed(1)}m
+              </span>
+              <button
+                onClick={(e) => handleAdjustDiameter(e, selectedPlant.instanceId, 0.2)}
+                className="w-6 h-6 flex items-center justify-center text-emerald-400 hover:text-emerald-300 font-bold text-xs"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Measuring Bar Callout if measuring is active */}
       {isMeasuring && (
@@ -566,11 +658,11 @@ export default function DesignCanvas({
                     }`}
                     style={{ width: `${renderedWidth}px`, height: viewMode === 'cenital' ? `${renderedWidth}px` : 'auto' }}
                   >
-                    {/* Floating Controls Toolbar on Selection with Plant Stage & Meter Controls */}
+                    {/* Floating Controls Toolbar on Selection with Plant Stage & Meter Controls (Desktop) */}
                     {isSelected && (
                       <div
                         onPointerDown={(e) => e.stopPropagation()}
-                        className="absolute -top-16 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-emerald-400/60 shadow-2xl z-50 animate-fadeIn whitespace-nowrap"
+                        className="hidden sm:flex absolute -top-16 left-1/2 -translate-x-1/2 items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl border border-emerald-400/60 shadow-2xl z-50 animate-fadeIn whitespace-nowrap"
                       >
                         {/* Growth Stage Selector (Pequeña / Mediana / Grande) */}
                         <div className="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-xl border border-slate-700/80">
