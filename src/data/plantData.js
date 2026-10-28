@@ -90,6 +90,7 @@ export const PLANT_CATALOG = [
     height: '70 - 110 cm',
     canopyDiameter: '1.4 m',
     image: '/plants/monstera-deliciosa.png',
+    groundImage: '/plants/ground_monstera-deliciosa.png',
     topImage: '/plants/top_monstera.png',
     accentColor: '#10b981',
     sunRequirement: 'Luz indirecta / Sombra'
@@ -105,6 +106,7 @@ export const PLANT_CATALOG = [
     height: '130 - 180 cm',
     canopyDiameter: '2.0 m',
     image: '/plants/palmera-areca.png',
+    groundImage: '/plants/ground_palmera-areca.png',
     topImage: '/plants/top_palm.png',
     accentColor: '#15803d',
     sunRequirement: 'Sol suave / Semisombra'
@@ -120,6 +122,7 @@ export const PLANT_CATALOG = [
     height: '110 - 150 cm',
     canopyDiameter: '1.3 m',
     image: '/plants/ficus-lyrata.png',
+    groundImage: '/plants/ground_ficus-lyrata.png',
     topImage: '/plants/top_monstera.png',
     accentColor: '#059669',
     sunRequirement: 'Semisombra luminosa'
@@ -135,6 +138,7 @@ export const PLANT_CATALOG = [
     height: '50 - 80 cm',
     canopyDiameter: '0.6 m',
     image: '/plants/sansevieria.png',
+    groundImage: '/plants/ground_sansevieria.png',
     topImage: '/plants/top_succulent.png',
     accentColor: '#eab308',
     sunRequirement: 'Sombra a Pleno Sol'
@@ -150,6 +154,7 @@ export const PLANT_CATALOG = [
     height: '35 - 50 cm',
     canopyDiameter: '0.8 m',
     image: '/plants/lavanda-floral.png',
+    groundImage: '/plants/ground_lavanda-floral.png',
     topImage: '/plants/top_flower.png',
     accentColor: '#8b5cf6',
     sunRequirement: 'Sol Pleno (6h+)'
@@ -165,6 +170,7 @@ export const PLANT_CATALOG = [
     height: '50 - 70 cm',
     canopyDiameter: '1.0 m',
     image: '/plants/helecho-boston.png',
+    groundImage: '/plants/ground_helecho-boston.png',
     topImage: '/plants/top_palm.png',
     accentColor: '#22c55e',
     sunRequirement: 'Sombra húmeda'
@@ -180,6 +186,7 @@ export const PLANT_CATALOG = [
     height: '120 - 160 cm',
     canopyDiameter: '1.8 m',
     image: '/plants/ave-del-paraiso.png',
+    groundImage: '/plants/ground_ave-del-paraiso.png',
     topImage: '/plants/top_palm.png',
     accentColor: '#f97316',
     sunRequirement: 'Sol directo o semisombra'
@@ -195,6 +202,7 @@ export const PLANT_CATALOG = [
     height: '45 - 65 cm',
     canopyDiameter: '0.9 m',
     image: '/plants/calathea.png',
+    groundImage: '/plants/ground_calathea.png',
     topImage: '/plants/top_monstera.png',
     accentColor: '#10b981',
     sunRequirement: 'Sombra luminosa cálida'
@@ -210,6 +218,7 @@ export const PLANT_CATALOG = [
     height: '60 - 90 cm',
     canopyDiameter: '1.2 m',
     image: '/plants/arbusto-jardin.png',
+    groundImage: '/plants/ground_arbusto-jardin.png',
     topImage: '/plants/top_tree.png',
     accentColor: '#eab308',
     sunRequirement: 'Sol directo'
@@ -225,6 +234,7 @@ export const PLANT_CATALOG = [
     height: '20 - 30 cm',
     canopyDiameter: '0.4 m',
     image: '/plants/suculenta-roseta.png',
+    groundImage: '/plants/ground_suculenta-roseta.png',
     topImage: '/plants/top_succulent.png',
     accentColor: '#06b6d4',
     sunRequirement: 'Sol Pleno y poco riego'
@@ -240,6 +250,7 @@ export const PLANT_CATALOG = [
     height: '90 - 130 cm',
     canopyDiameter: '2.2 m',
     image: '/plants/olivo-ornamental.png',
+    groundImage: '/plants/ground_olivo-ornamental.png',
     topImage: '/plants/top_tree.png',
     accentColor: '#65a30d',
     sunRequirement: 'Sol Pleno'
@@ -255,6 +266,7 @@ export const PLANT_CATALOG = [
     height: '50 - 70 cm',
     canopyDiameter: '0.8 m',
     image: '/plants/buxus-topiaria.png',
+    groundImage: '/plants/ground_buxus-topiaria.png',
     topImage: '/plants/top_topiary.png',
     accentColor: '#16a34a',
     sunRequirement: 'Sol Pleno o Media Sombra'

@@ -987,18 +987,25 @@ export default function DesignCanvas({
                       />
                     ) : (
                       <div className="relative">
-                        <img
-                          src={instance.image}
-                          alt={instance.name}
-                          draggable={false}
-                          className="w-full h-auto object-contain pointer-events-none select-none transition-transform duration-150"
-                          style={{
-                            transform: instance.flipped ? 'scaleX(-1)' : 'none',
-                            filter: 'none',
-                          }}
-                        />
-                        {/* Custom Soil Mound or Designer Planter Base */}
-                        <PlantPotBase potType={instance.potType || 'matera'} isSelected={isSelected} />
+                        {(() => {
+                          const isGround = (instance.potType || 'matera') === 'tierra';
+                          const displaySrc = isGround
+                            ? (instance.groundImage || (instance.image?.startsWith('/plants/') ? instance.image.replace('/plants/', '/plants/ground_') : instance.image))
+                            : instance.image;
+
+                          return (
+                            <img
+                              src={displaySrc}
+                              alt={instance.name}
+                              draggable={false}
+                              className="w-full h-auto object-contain pointer-events-none select-none transition-transform duration-150"
+                              style={{
+                                transform: instance.flipped ? 'scaleX(-1)' : 'none',
+                                filter: 'none',
+                              }}
+                            />
+                          );
+                        })()}
                       </div>
                     )}
 
