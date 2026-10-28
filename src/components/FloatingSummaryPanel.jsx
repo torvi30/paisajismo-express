@@ -375,7 +375,7 @@ export default function FloatingSummaryPanel({
                               ${unitPrice.toLocaleString('es-AR')} c/u
                             </span>
                             <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-slate-900 border border-slate-700 text-amber-300">
-                              {potOption?.badgeText || '🌱 En Tierra'}
+                              {potOption?.badgeText || '🪴 Con Matera'}
                             </span>
                           </div>
                         </div>

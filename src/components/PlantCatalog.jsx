@@ -249,22 +249,22 @@ export default function PlantCatalog({ onAddPlant, placedPlantsCountBySpecies })
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          handleAddWithFeedback({ ...plant, defaultPotType: 'matera' });
+                        }}
+                        className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-900/90 hover:bg-emerald-600 text-slate-300 hover:text-white font-semibold border border-slate-700/80 transition-colors"
+                        title="Añadir con su maceta original estándar"
+                      >
+                        🪴 Con Matera
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           handleAddWithFeedback({ ...plant, defaultPotType: 'tierra' });
                         }}
                         className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-950/40 hover:bg-emerald-600 text-amber-200 hover:text-white font-semibold border border-amber-800/50 transition-colors"
                         title="Añadir para plantar directamente en tierra de jardín (sin matera)"
                       >
-                        🌱 En Tierra ($0)
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddWithFeedback({ ...plant, defaultPotType: 'blanca' });
-                        }}
-                        className="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-900/90 hover:bg-emerald-600 text-slate-300 hover:text-white font-semibold border border-slate-700/80 transition-colors"
-                        title="Añadir con matera decorativa"
-                      >
-                        🏺 Con Matera
+                        🌱 Sin Matera (Tierra)
                       </button>
                     </div>
                   </div>

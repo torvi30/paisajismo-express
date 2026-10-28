@@ -263,10 +263,21 @@ export const PLANT_CATALOG = [
 
 export const POT_OPTIONS = [
   {
+    id: 'matera',
+    name: 'Con Matera (Original de Vivero)',
+    shortName: '🪴 Con Matera',
+    badgeText: '🪴 Con Matera',
+    description: 'Planta en su maceta original estándar de cultivo',
+    price: 0,
+    color: '#94a3b8',
+    borderColor: '#64748b',
+    icon: '🪴'
+  },
+  {
     id: 'tierra',
     name: 'En Tierra Directa (Sin Matera)',
-    shortName: '🌱 En Tierra',
-    badgeText: '🌱 Sin matera (Tierra)',
+    shortName: '🌱 Sin Matera (Tierra)',
+    badgeText: '🌱 Sin Matera (Tierra)',
     description: 'Sembrado directamente en el suelo o cantero del jardín',
     price: 0,
     color: '#3b2514',

@@ -28,7 +28,7 @@ export default function App() {
         baseDiameterMeters: 1.4,
         diameterMeters: 1.4,
         stage: 'adulta',
-        potType: 'tierra',
+        potType: 'matera',
         potPrice: 0,
         category: 'Sombra',
         price: 18500,
@@ -48,8 +48,8 @@ export default function App() {
         baseDiameterMeters: 2.0,
         diameterMeters: 2.0,
         stage: 'adulta',
-        potType: 'cemento',
-        potPrice: 11500,
+        potType: 'matera',
+        potPrice: 0,
         category: 'Semisombra',
         price: 24000,
         x: 70,
@@ -68,8 +68,8 @@ export default function App() {
         baseDiameterMeters: 0.8,
         diameterMeters: 0.8,
         stage: 'adulta',
-        potType: 'barro',
-        potPrice: 6800,
+        potType: 'matera',
+        potPrice: 0,
         category: 'Sol',
         price: 7500,
         x: 52,
@@ -182,7 +182,7 @@ export default function App() {
     const stage = plant.defaultStage || 'adulta';
     const multiplier = stage === 'joven' ? 0.55 : stage === 'mediana' ? 0.8 : 1.0;
     const startDiameter = Number((baseDiameter * multiplier).toFixed(1));
-    const potType = customPotType || plant.defaultPotType || 'tierra';
+    const potType = customPotType || plant.defaultPotType || 'matera';
     const potOption = POT_OPTIONS.find((p) => p.id === potType) || POT_OPTIONS[0];
 
     const newInstance = {
@@ -230,7 +230,7 @@ export default function App() {
 
     placedPlants.forEach((p) => {
       counts[p.plantId] = (counts[p.plantId] || 0) + 1;
-      const potType = p.potType || 'tierra';
+      const potType = p.potType || 'matera';
       const key = `${p.plantId}__${potType}`;
 
       if (!groupMap[key]) {
@@ -265,7 +265,7 @@ export default function App() {
   }, [placedPlants]);
 
   // Modifiers from the summary panel
-  const handleIncrementSpecies = (plant, potType = 'tierra') => {
+  const handleIncrementSpecies = (plant, potType = 'matera') => {
     handleAddPlantDirectly({ ...plant, defaultPotType: potType });
   };
 
@@ -274,7 +274,7 @@ export default function App() {
       // Find the last instance matching plantId and optional potType
       const reversedIndex = [...prev].reverse().findIndex((p) => {
         if (p.plantId !== plantId) return false;
-        if (potType && (p.potType || 'tierra') !== potType) return false;
+        if (potType && (p.potType || 'matera') !== potType) return false;
         return true;
       });
       if (reversedIndex === -1) return prev;

@@ -14,8 +14,8 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
   const stageLabel = plant.stage === 'joven' ? '🌱 Joven' : plant.stage === 'mediana' ? '🌿 Mediana' : '🌳 Adulta';
   const topImage = plant.topImage || '/plants/top_monstera.png';
 
-  const potOption = POT_OPTIONS.find((p) => p.id === (plant.potType || 'tierra')) || POT_OPTIONS[0];
-  const isGround = (plant.potType || 'tierra') === 'tierra';
+  const potOption = POT_OPTIONS.find((p) => p.id === (plant.potType || 'matera')) || POT_OPTIONS[0];
+  const isGround = (plant.potType || 'matera') === 'tierra';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center select-none pointer-events-none">
@@ -52,8 +52,8 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
           className="w-full h-full object-contain pointer-events-none transition-transform duration-200"
           style={{
             filter: isSelected
-              ? 'drop-shadow(0 20px 16px rgba(0,0,0,0.65)) drop-shadow(0 0 10px rgba(16,185,129,0.5))'
-              : 'drop-shadow(0 15px 12px rgba(0,0,0,0.55)) drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
+              ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.25)) drop-shadow(0 0 6px rgba(16,185,129,0.35))'
+              : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
           }}
         />
 
