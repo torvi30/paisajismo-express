@@ -21,6 +21,8 @@ import {
   Sprout
 } from 'lucide-react';
 import PlantCanopyTopDown from './PlantCanopyTopDown';
+import PlantPotBase from './PlantPotBase';
+import { POT_OPTIONS } from '../data/plantData';
 
 export default function DesignCanvas({
   viewMode = 'frontal',
@@ -318,6 +320,22 @@ export default function DesignCanvas({
           diameterMeters: nextDiameter,
           scale: Number((nextDiameter / base).toFixed(2)),
           stage: nextDiameter < base * 0.65 ? 'joven' : nextDiameter < base * 0.9 ? 'mediana' : 'adulta',
+        };
+      })
+    );
+  };
+
+  // Change pot or direct soil planting
+  const handleSetPotType = (e, instanceId, newPotType) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const potOption = POT_OPTIONS.find((p) => p.id === newPotType) || POT_OPTIONS[0];
+    setPlacedPlants((prev) =>
+      prev.map((item) => {
+        if (item.instanceId !== instanceId) return item;
+        return {
+          ...item,
+          potType: newPotType,
+          potPrice: potOption.price || 0,
         };
       })
     );
@@ -626,6 +644,46 @@ export default function DesignCanvas({
               </div>
             </div>
           </div>
+
+          {/* Row 3: Siembra en Tierra Directa vs Selección de Matera */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pt-2 border-t border-slate-800">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                🪴 Siembra / Matera:
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                {POT_OPTIONS.find((p) => p.id === (selectedPlant.potType || 'tierra'))?.badgeText || '🌱 En Tierra'}
+                {POT_OPTIONS.find((p) => p.id === (selectedPlant.potType || 'tierra'))?.price > 0 && 
+                  ` (+$${POT_OPTIONS.find((p) => p.id === (selectedPlant.potType || 'tierra'))?.price.toLocaleString('es-AR')})`}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 max-w-full">
+              {POT_OPTIONS.map((pot) => {
+                const isActive = (selectedPlant.potType || 'tierra') === pot.id;
+                return (
+                  <button
+                    key={pot.id}
+                    type="button"
+                    onClick={(e) => handleSetPotType(e, selectedPlant.instanceId, pot.id)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1 border ${
+                      isActive
+                        ? 'bg-emerald-600 text-white font-extrabold border-emerald-400 shadow-sm'
+                        : 'bg-slate-950/80 text-slate-400 hover:text-white border-slate-800 hover:border-slate-700'
+                    }`}
+                    title={pot.description}
+                  >
+                    <span>{pot.shortName}</span>
+                    {pot.price > 0 && (
+                      <span className={`text-[9px] ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                        +${(pot.price / 1000).toFixed(1)}k
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -900,7 +958,7 @@ export default function DesignCanvas({
                           <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
                           <div className="flex-1 border-t-2 border-emerald-400 border-dashed mx-1 flex items-center justify-center">
                             <span className="bg-slate-950/95 px-2 py-0.5 rounded-full border border-emerald-500/50 text-emerald-300 shadow-md whitespace-nowrap text-[10px] font-bold">
-                              ↔ {plantDiameterMeters.toFixed(1)} m reales ↔
+                              ↔ {plantDiameterMeters.toFixed(1)} m reales • {POT_OPTIONS.find((p) => p.id === (instance.potType || 'tierra'))?.shortName || '🌱 En Tierra'} ↔
                             </span>
                           </div>
                           <div className="w-1 h-3.5 bg-emerald-400 rounded-full" />
@@ -939,13 +997,15 @@ export default function DesignCanvas({
                             filter: 'none',
                           }}
                         />
+                        {/* Custom Soil Mound or Designer Planter Base */}
+                        <PlantPotBase potType={instance.potType || 'tierra'} isSelected={isSelected} />
                       </div>
                     )}
 
                     {/* Discreet Species Label on Hover when not selected */}
                     {!isSelected && (
                       <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950/85 backdrop-blur-md text-emerald-300 border border-emerald-500/30 shadow-lg pointer-events-none transition-opacity duration-200 z-30 opacity-0 group-hover:opacity-100">
-                        {instance.name} • Ø {plantDiameterMeters.toFixed(1)}m ({currentStage})
+                        {instance.name} • Ø {plantDiameterMeters.toFixed(1)}m • {POT_OPTIONS.find((p) => p.id === (instance.potType || 'tierra'))?.badgeText || '🌱 En Tierra'}
                       </div>
                     )}
                   </div>

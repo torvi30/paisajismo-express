@@ -260,3 +260,73 @@ export const PLANT_CATALOG = [
     sunRequirement: 'Sol Pleno o Media Sombra'
   }
 ];
+
+export const POT_OPTIONS = [
+  {
+    id: 'tierra',
+    name: 'En Tierra Directa (Sin Matera)',
+    shortName: '🌱 En Tierra',
+    badgeText: '🌱 Sin matera (Tierra)',
+    description: 'Sembrado directamente en el suelo o cantero del jardín',
+    price: 0,
+    color: '#3b2514',
+    borderColor: '#78350f',
+    icon: '🌱'
+  },
+  {
+    id: 'blanca',
+    name: 'Matera Cerámica Blanca',
+    shortName: '⚪ Cerámica Blanca',
+    badgeText: '⚪ Cerámica Blanca',
+    description: 'Acabado esmaltado moderno nórdico minimalista',
+    price: 8500,
+    color: '#f8fafc',
+    borderColor: '#cbd5e1',
+    icon: '⚪'
+  },
+  {
+    id: 'negra',
+    name: 'Matera Negra Grafito',
+    shortName: '⚫ Negra Grafito',
+    badgeText: '⚫ Negra Grafito',
+    description: 'Cilíndrica mate contemporánea arquitectónica',
+    price: 9200,
+    color: '#1e293b',
+    borderColor: '#334155',
+    icon: '⚫'
+  },
+  {
+    id: 'barro',
+    name: 'Matera Barro / Terracota',
+    shortName: '🧱 Terracota / Barro',
+    badgeText: '🧱 Terracota / Barro',
+    description: 'Arcilla natural porosa artesanal clásica',
+    price: 6800,
+    color: '#c2410c',
+    borderColor: '#ea580c',
+    icon: '🧱'
+  },
+  {
+    id: 'cemento',
+    name: 'Matera Cemento Arquitectónico',
+    shortName: '🏛️ Cemento Gris',
+    badgeText: '🏛️ Cemento Gris',
+    description: 'Hormigón pulido estilo urbano brutalista',
+    price: 11500,
+    color: '#64748b',
+    borderColor: '#94a3b8',
+    icon: '🏛️'
+  },
+  {
+    id: 'fibra',
+    name: 'Canasta Fibra Natural / Yute',
+    shortName: '🌾 Fibra / Yute',
+    badgeText: '🌾 Fibra / Yute',
+    description: 'Tejido artesanal cálido y natural',
+    price: 7900,
+    color: '#d97706',
+    borderColor: '#f59e0b',
+    icon: '🌾'
+  }
+];
+

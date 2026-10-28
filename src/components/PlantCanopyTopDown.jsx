@@ -1,9 +1,11 @@
 import React from 'react';
+import { POT_OPTIONS } from '../data/plantData';
 
 /**
  * Photorealistic Top-Down Botanical Canopy Component
  * Renders high-resolution transparent foliage cutouts seen from above
- * with realistic ground shadows and metric adult growth diameter rings.
+ * with realistic ground shadows, metric adult growth diameter rings,
+ * and planter pot / direct ground indicators.
  */
 export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showRadius = true }) {
   const currentDiameter = plant.diameterMeters 
@@ -11,6 +13,9 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
     : plant.canopyDiameter || '1.2 m';
   const stageLabel = plant.stage === 'joven' ? '🌱 Joven' : plant.stage === 'mediana' ? '🌿 Mediana' : '🌳 Adulta';
   const topImage = plant.topImage || '/plants/top_monstera.png';
+
+  const potOption = POT_OPTIONS.find((p) => p.id === (plant.potType || 'tierra')) || POT_OPTIONS[0];
+  const isGround = (plant.potType || 'tierra') === 'tierra';
 
   return (
     <div className="relative w-full h-full flex items-center justify-center select-none pointer-events-none">
@@ -27,11 +32,12 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
             height: '120%',
           }}
         >
-          {/* Metric Adult Diameter Tag */}
+          {/* Metric Adult Diameter & Pot Tag */}
           {isSelected && (
-            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-900/95 text-emerald-300 border border-emerald-500/40 shadow-md whitespace-nowrap flex items-center gap-1">
+            <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-900/95 text-emerald-300 border border-emerald-500/40 shadow-md whitespace-nowrap flex items-center gap-1.5">
               <span>{stageLabel}</span>
               <span className="text-white">Ø {currentDiameter}</span>
+              <span className="text-amber-300 border-l border-slate-700 pl-1.5">{potOption.shortName}</span>
             </span>
           )}
         </div>
@@ -51,8 +57,28 @@ export default function PlantCanopyTopDown({ plant, scale = 1, isSelected, showR
           }}
         />
 
-        {/* Discreet Center Trunk Marker */}
-        <div className="absolute w-2 h-2 rounded-full bg-slate-900/80 border border-emerald-400/60 shadow-sm pointer-events-none" />
+        {/* Center Planter Pot or Direct Soil Root Ring */}
+        {isGround ? (
+          /* Direct ground: subtle natural dark soil ring */
+          <div 
+            className="absolute w-3.5 h-3.5 rounded-full border border-dashed border-amber-600/70 bg-[#25150b]/80 shadow-sm pointer-events-none flex items-center justify-center"
+            title="Sembrado en tierra directa"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          </div>
+        ) : (
+          /* Planter pot: clear geometric pot perimeter with pot color */
+          <div 
+            className="absolute w-4 h-4 rounded-full border-2 shadow-md pointer-events-none flex items-center justify-center"
+            style={{ 
+              backgroundColor: potOption.color,
+              borderColor: potOption.borderColor || '#cbd5e1'
+            }}
+            title={potOption.name}
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-900/90" />
+          </div>
+        )}
       </div>
     </div>
   );

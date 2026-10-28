@@ -84,9 +84,11 @@ export default function FloatingSummaryPanel({
       const diameterInfo = item.plant.diameterMeters 
         ? ` _(Ø ${item.plant.diameterMeters}m - ${item.plant.stage || 'adulta'})_`
         : ` _(Copa Ø ${item.plant.canopyDiameter || '1.4m'})_`;
-      text += `• *${item.count}x* ${item.plant.name}${diameterInfo}`;
-      if (item.plant.price) {
-        text += ` - Est. $${(item.plant.price * item.count).toLocaleString('es-AR')}`;
+      const potInfo = item.potOption ? ` [${item.potOption.badgeText}]` : '';
+      text += `• *${item.count}x* ${item.plant.name}${diameterInfo}${potInfo}`;
+      const itemTotal = item.totalPrice || (((item.plant.price || 0) + (item.potOption?.price || 0)) * item.count);
+      if (itemTotal > 0) {
+        text += ` - Est. $${itemTotal.toLocaleString('es-AR')}`;
       }
       text += `\n`;
     });
@@ -349,31 +351,40 @@ export default function FloatingSummaryPanel({
 
               {/* Species itemized list */}
               <div className="space-y-2">
-                {sortedSummaryList.map(({ plant, count }) => (
-                  <div
-                    key={plant.id}
-                    className="flex items-center justify-between gap-3 p-2 rounded-xl bg-slate-800/60 border border-slate-700/60"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-11 h-11 rounded-lg bg-slate-900 border border-slate-700 shrink-0 p-1 flex items-center justify-center">
-                        <img
-                          src={plant.image}
-                          alt={plant.name}
-                          className="max-w-full max-h-full object-contain filter drop-shadow-sm"
-                        />
+                {sortedSummaryList.map((item) => {
+                  const { plant, count, potOption, key, plantId, potType } = item;
+                  const unitPrice = (plant.price || 0) + (potOption?.price || 0);
+
+                  return (
+                    <div
+                      key={key || `${plant.id}_${potType}`}
+                      className="flex items-center justify-between gap-3 p-2 rounded-xl bg-slate-800/60 border border-slate-700/60"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-11 h-11 rounded-lg bg-slate-900 border border-slate-700 shrink-0 p-1 flex items-center justify-center">
+                          <img
+                            src={plant.image}
+                            alt={plant.name}
+                            className="max-w-full max-h-full object-contain filter drop-shadow-sm"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{plant.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                            <span className="text-[10px] text-emerald-400 font-semibold font-mono">
+                              ${unitPrice.toLocaleString('es-AR')} c/u
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-slate-900 border border-slate-700 text-amber-300">
+                              {potOption?.badgeText || '🌱 En Tierra'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate">{plant.name}</p>
-                        <p className="text-[10px] text-emerald-400 font-medium">
-                          ${plant.price.toLocaleString('es-AR')} c/u • {plant.category}
-                        </p>
-                      </div>
-                    </div>
 
                     {/* Quantity Modifier Buttons (+, -, trash) */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
-                        onClick={() => onDecrementSpecies(plant.id)}
+                        onClick={() => onDecrementSpecies(plantId || plant.id, potType)}
                         className="w-7 h-7 rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition-colors"
                         title="Quitar una unidad"
                       >
@@ -383,14 +394,14 @@ export default function FloatingSummaryPanel({
                         {count}
                       </span>
                       <button
-                        onClick={() => onIncrementSpecies(plant)}
+                        onClick={() => onIncrementSpecies(plant, potType)}
                         className="w-7 h-7 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white flex items-center justify-center transition-colors"
                         title="Añadir otra unidad"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                       <button
-                        onClick={() => onRemoveSpecies(plant.id)}
+                        onClick={() => onRemoveSpecies(plantId || plant.id)}
                         className="w-7 h-7 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 flex items-center justify-center transition-colors ml-1"
                         title="Eliminar esta especie"
                       >
@@ -398,7 +409,8 @@ export default function FloatingSummaryPanel({
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
 
               {/* Optional Customization: Name and Note */}

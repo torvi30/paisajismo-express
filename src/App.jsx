@@ -7,7 +7,7 @@ import FloatingSummaryPanel from './components/FloatingSummaryPanel';
 import SettingsModal from './components/SettingsModal';
 import HelpModal from './components/HelpModal';
 import SpaceDimensionsModal from './components/SpaceDimensionsModal';
-import { TEMPLATE_BACKGROUNDS, PLANT_CATALOG } from './data/plantData';
+import { TEMPLATE_BACKGROUNDS, PLANT_CATALOG, POT_OPTIONS } from './data/plantData';
 
 export default function App() {
   // Background State
@@ -28,6 +28,8 @@ export default function App() {
         baseDiameterMeters: 1.4,
         diameterMeters: 1.4,
         stage: 'adulta',
+        potType: 'tierra',
+        potPrice: 0,
         category: 'Sombra',
         price: 18500,
         x: 32,
@@ -46,6 +48,8 @@ export default function App() {
         baseDiameterMeters: 2.0,
         diameterMeters: 2.0,
         stage: 'adulta',
+        potType: 'cemento',
+        potPrice: 11500,
         category: 'Semisombra',
         price: 24000,
         x: 70,
@@ -64,6 +68,8 @@ export default function App() {
         baseDiameterMeters: 0.8,
         diameterMeters: 0.8,
         stage: 'adulta',
+        potType: 'barro',
+        potPrice: 6800,
         category: 'Sol',
         price: 7500,
         x: 52,
@@ -164,7 +170,7 @@ export default function App() {
   };
 
   // Add plant to canvas directly (from sidebar click or drop)
-  const handleAddPlantDirectly = (plant, customX = null, customY = null) => {
+  const handleAddPlantDirectly = (plant, customX = null, customY = null, customPotType = null) => {
     // If no coordinates provided, place near center with slight natural offset
     const jitterX = (Math.random() - 0.5) * 16;
     const jitterY = (Math.random() - 0.5) * 14;
@@ -176,6 +182,8 @@ export default function App() {
     const stage = plant.defaultStage || 'adulta';
     const multiplier = stage === 'joven' ? 0.55 : stage === 'mediana' ? 0.8 : 1.0;
     const startDiameter = Number((baseDiameter * multiplier).toFixed(1));
+    const potType = customPotType || plant.defaultPotType || 'tierra';
+    const potOption = POT_OPTIONS.find((p) => p.id === potType) || POT_OPTIONS[0];
 
     const newInstance = {
       instanceId: `plant-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -187,6 +195,8 @@ export default function App() {
       baseDiameterMeters: baseDiameter,
       diameterMeters: startDiameter,
       stage: stage,
+      potType: potType,
+      potPrice: potOption.price || 0,
       category: plant.category,
       price: plant.price || 0,
       x: posX,
@@ -216,21 +226,36 @@ export default function App() {
   // Summary counts and prices
   const { summaryList, placedPlantsCountBySpecies, totalEstimatedPrice } = useMemo(() => {
     const counts = {};
+    const groupMap = {};
+
     placedPlants.forEach((p) => {
       counts[p.plantId] = (counts[p.plantId] || 0) + 1;
+      const potType = p.potType || 'tierra';
+      const key = `${p.plantId}__${potType}`;
+
+      if (!groupMap[key]) {
+        const plantDef =
+          PLANT_CATALOG.find((cat) => cat.id === p.plantId) ||
+          placedPlants.find((item) => item.plantId === p.plantId);
+        const potOption = POT_OPTIONS.find((pot) => pot.id === potType) || POT_OPTIONS[0];
+
+        groupMap[key] = {
+          key,
+          plantId: p.plantId,
+          plant: { ...plantDef, diameterMeters: p.diameterMeters, stage: p.stage },
+          potType,
+          potOption,
+          count: 0,
+          totalPrice: 0,
+        };
+      }
+      const unitPrice = (p.price || 0) + (p.potPrice || 0);
+      groupMap[key].count += 1;
+      groupMap[key].totalPrice += unitPrice;
     });
 
-    const list = Object.keys(counts).map((plantId) => {
-      const plantDef =
-        PLANT_CATALOG.find((p) => p.id === plantId) ||
-        placedPlants.find((p) => p.plantId === plantId);
-      return {
-        plant: plantDef,
-        count: counts[plantId],
-      };
-    });
-
-    const totalPrice = placedPlants.reduce((acc, curr) => acc + (curr.price || 0), 0);
+    const list = Object.values(groupMap);
+    const totalPrice = placedPlants.reduce((acc, curr) => acc + (curr.price || 0) + (curr.potPrice || 0), 0);
 
     return {
       summaryList: list,
@@ -240,14 +265,18 @@ export default function App() {
   }, [placedPlants]);
 
   // Modifiers from the summary panel
-  const handleIncrementSpecies = (plant) => {
-    handleAddPlantDirectly(plant);
+  const handleIncrementSpecies = (plant, potType = 'tierra') => {
+    handleAddPlantDirectly({ ...plant, defaultPotType: potType });
   };
 
-  const handleDecrementSpecies = (plantId) => {
+  const handleDecrementSpecies = (plantId, potType = null) => {
     setPlacedPlants((prev) => {
-      // Find the last instance of this species and remove it
-      const reversedIndex = [...prev].reverse().findIndex((p) => p.plantId === plantId);
+      // Find the last instance matching plantId and optional potType
+      const reversedIndex = [...prev].reverse().findIndex((p) => {
+        if (p.plantId !== plantId) return false;
+        if (potType && (p.potType || 'tierra') !== potType) return false;
+        return true;
+      });
       if (reversedIndex === -1) return prev;
       const actualIndex = prev.length - 1 - reversedIndex;
       return prev.filter((_, idx) => idx !== actualIndex);
